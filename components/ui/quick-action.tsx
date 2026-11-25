@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import * as Lucide from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AlertCircle, Inbox } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Props = {
-  icono?: LucideIcon;
+  icono?: LucideIcon | string;
   titulo?: string;
   descripcion?: string;
   href?: string;
@@ -67,11 +68,12 @@ export function QuickAction({
     );
   }
 
-  const Icon = Icono ?? Inbox;
+  const ICONOS = Lucide as unknown as Record<string, LucideIcon | undefined>;
+  const IconoResuelto = typeof Icono === "string" ? (ICONOS[Icono] ?? Inbox) : (Icono ?? Inbox);
   const content = (
     <>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line-subtle bg-bg-subtle text-fire-text transition-colors group-hover:border-fire-border group-hover:bg-fire-light">
-        <Icon className="h-5 w-5" aria-hidden />
+        <IconoResuelto className="h-5 w-5" aria-hidden />
       </span>
       <span className="min-w-0">
         <span className="block text-[15px] font-semibold text-ink">{titulo}</span>

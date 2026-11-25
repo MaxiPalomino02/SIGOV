@@ -334,25 +334,25 @@ export default async function ReportesPage({ searchParams }: Props) {
           <>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <QuickAction
-                icono={FileText}
+                icono="FileText"
                 titulo={`${formatearEntero(resumen.incidentes)} incidentes`}
                 descripcion="Registrados en el período elegido."
                 href="/incidentes"
               />
               <QuickAction
-                icono={Clock3}
+                icono="Clock3"
                 titulo={`${formatearEntero(resumen.horas_guardia)} horas`}
                 descripcion="Horas de guardia sumadas por franja."
                 href="/guardias"
               />
               <QuickAction
-                icono={ShieldCheck}
+                icono="ShieldCheck"
                 titulo={formatearPorcentaje(resumen.cobertura_promedio)}
                 descripcion="Cobertura promedio de las franjas."
                 href="/guardias"
               />
               <QuickAction
-                icono={ClipboardCheck}
+                icono="ClipboardCheck"
                 titulo={`${formatearEntero(resumen.fallas_chequeo)} fallas`}
                 descripcion="Fallas detectadas en chequeos."
                 href="/chequeo"
@@ -514,7 +514,7 @@ export default async function ReportesPage({ searchParams }: Props) {
 
             <div className="mt-5">
               <QuickAction
-                icono={LayoutDashboard}
+                icono="LayoutDashboard"
                 titulo="Volver al tablero"
                 descripcion="Ir a la vista operativa del cuartel."
                 href="/inicio"
