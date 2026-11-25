@@ -1,5 +1,5 @@
-import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Oswald, Source_Sans_3 } from "next/font/google";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { BotonInstalarApp } from "@/components/boton-instalar-app";
 import { Sincronizador } from "@/components/sincronizador";
@@ -7,22 +7,10 @@ import { CUARTEL } from "@/lib/cuartel.config";
 import { PRODUCTO } from "@/lib/marca";
 import "./globals.css";
 
-const oswald = Oswald({
-  variable: "--font-oswald",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const sourceSans = Source_Sans_3({
-  variable: "--font-source-sans",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -43,21 +31,14 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#f2f5f3",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className={`${oswald.variable} ${sourceSans.variable} ${plexMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-bg text-ink">
+    <html lang="es" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col bg-bg text-label">
         <SerwistProvider swUrl="/serwist/sw.js">
           <Sincronizador />
           {children}

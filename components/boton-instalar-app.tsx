@@ -26,12 +26,16 @@ function esIphone(): boolean {
 
 export function BotonInstalarApp() {
   const promptRef = useRef<EventoInstalacion | null>(null);
-  const [oculto, setOculto] = useState(enModoIndependiente);
+  const [oculto, setOculto] = useState(true);
   const [instalable, setInstalable] = useState(false);
   const [instrucciones, setInstrucciones] = useState(false);
-  const [iphone] = useState(esIphone);
+  const [iphone, setIphone] = useState(false);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setOculto(enModoIndependiente());
+      setIphone(esIphone());
+    });
     const alPedirInstalacion = (evento: Event) => {
       evento.preventDefault();
       promptRef.current = evento as EventoInstalacion;
@@ -45,6 +49,7 @@ export function BotonInstalarApp() {
     window.addEventListener("beforeinstallprompt", alPedirInstalacion);
     window.addEventListener("appinstalled", alInstalar);
     return () => {
+      window.cancelAnimationFrame(frame);
       window.removeEventListener("beforeinstallprompt", alPedirInstalacion);
       window.removeEventListener("appinstalled", alInstalar);
     };

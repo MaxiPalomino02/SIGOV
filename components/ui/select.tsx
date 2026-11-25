@@ -27,12 +27,9 @@ export function Select({
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
+    <div className={`flex flex-col gap-2 ${containerClassName}`}>
       {label ? (
-        <label
-          htmlFor={selectId}
-          className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted"
-        >
+        <label htmlFor={selectId} className="text-[15px] text-label-2">
           {label}
         </label>
       ) : null}
@@ -41,25 +38,25 @@ export function Select({
           id={selectId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`min-h-11 w-full appearance-none rounded-[10px] border bg-surface py-2 pl-3.5 pr-10 text-[16px] text-ink transition-colors focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20 disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-ink-muted ${
-            error ? "border-fire" : "border-line"
-          } ${className}`}
+          className={`min-h-[50px] w-full appearance-none rounded-[14px] border border-separator bg-surface-2 py-3 pl-4 pr-11 text-[17px] text-label transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
           {...props}
         >
           {children}
         </select>
         <ChevronDown
-          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+          size={22}
+          strokeWidth={1.75}
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-label-3"
           aria-hidden
         />
       </div>
       {hint ? (
-        <p id={hintId} className="text-[13px] text-ink-muted">
+        <p id={hintId} className="text-[13px] text-label-2">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-[13px] font-semibold text-fire-soft">
+        <p id={errorId} role="alert" className="text-[13px] font-semibold text-red">
           {error}
         </p>
       ) : null}

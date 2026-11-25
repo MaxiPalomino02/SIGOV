@@ -19,49 +19,37 @@ cambios).
  Bomberos La Trinidad".
 - Referencia de interfaz: consolas de despacho (MAGNER) solo como referencia de jerarquia operativa. No
  copiar su marca, sus textos ni su interfaz.
-## ZONA CONGELADA
-- LOGICA congelada: app/(tablero)/guardias/*, historial/*, admin/*, app/login/actions.ts, lib/tablero.ts,
- lib/historial.ts, lib/cargos.ts, lib/auth.ts, lib/session.ts, lib/session-db.ts. Cupos, cambios y
- cancelaciones, Realtime, impresion/planilla A4, sesion y rate limit no se tocan. supabase/schema.sql y
- rpc.sql no se editan: todo cambio va en una migracion nueva.
-- ASPECTO descongelado SOLO durante el rediseno: components/header.tsx, components/app-nav.tsx,
- app/(tablero)/guardias/tablero.tsx, app/(tablero)/inicio/*. Conservan rutas, permisos, datos y
- comportamiento; solo cambia la presentacion.
-- app/login/* sigue congelado por completo (logica y aspecto).
-- app/globals.css: solo se agrega al final (sin tocar lo existente).
-- components/ui/*: se pueden agregar componentes y variantes; no cambiar las clases existentes salvo
- autorizacion expresa de un prompt.
-- Autenticacion: login solo por legajo, con las mismas validaciones, rate limit y mensajes.
-## Lenguaje visual SIGOV (vive en tokens, nunca en colores fijos)
-- Tema claro por defecto en toda la app: fondo #f2f5f3, superficie/tarjetas #ffffff, texto #141a18,
- rojo #c8102e, laton #96702e, ambar #c2690b, verde solo para OK. Oscuro (#101317) solo en /login y
- /alarma, nunca en el resto.
-- El rojo se reserva para boton Alarma, boton principal, iconos de accion, no leido y alertas. No se usa
- como decoracion.
-- No quitar efectos, franjas, animaciones, iconos ni resaltados existentes salvo pedido explicito.
-- Tipografia: Oswald para el logo, titulos de pagina y titulos de tarjeta (mayusculas, tracking 0.08em,
- peso 600); IBM Plex Mono para etiquetas chicas en mayusculas, horas, fechas y legajos; Source Sans 3
- para el resto, en minuscula o tipo oracion, peso 400 o 500, sin tracking.
-- Numeros grandes: Oswald con tabular-nums, nunca IBM Plex Mono. Escala fija: titulo de pagina 28px,
- titulo de tarjeta 18px, texto 16px, auxiliar 13px. Solo un numero clave por pantalla puede ser mas
- grande.
-- Tarjetas: fondo blanco, radio 12px, sombra suave (0 1px 3px rgba(20,26,24,.06)), franja superior roja
- por defecto (laton o ambar solo si el contexto lo pide).
-- Header: logo SIGOV sin deformar, nombre del cuartel desde lib/cuartel.config.ts en Oswald, ubicacion
- en mono, badge Operativo en verde, nombre/cargo/legajo visibles junto al menu de usuario y Salir. El
- boton Alarma aparece solo para oficiales.
-- Nav: 5 items (Inicio, Guardias, Tareas, Avisos, Mas). Pestana activa con fondo fire-light y subrayado
- rojo; etiquetas en IBM Plex Mono mayusculas.
-- Inicio: titulo "INICIO" en Oswald, banner ambar "Operativo en servicio ahora", Tu turno con estilo
- laton, indicadores Tareas/Avisos/De guardia con numero en Oswald, 4 accesos rapidos, linea de huecos
- solo oficiales. Avisos y eventos solo si hay datos; altura por contenido.
-- Guardias: no cambiar el aspecto. La ayuda va en un icono "?" que abre una explicacion corta; celdas
- vacias con boton "+ ANOTARME" outlines rojo, fondo blanco y relleno rojo en hover/touch; cada franja
- muestra la hora una sola vez.
-- Sin paneles vacios: si no hay datos (alertas, tareas, avisos), no se renderiza nada o una sola linea de
- texto.
-- No repetir datos: el nombre, cargo y legajo viven solo en el menu de usuario del header.
-- Diseno mobile first. Impresion (planillas A4 y PDF): siempre clara, en blanco y negro.
+## Congelado: logica
+- RPC, cupos de 5, Realtime, sesion por legajo, rate limit, sirena y voz de la alarma, planilla A4.
+
+## Libre: todo el aspecto
+
+## Sistema de diseno iOS
+- Colores (tokens en globals.css, nunca hex sueltos): bg #F2F2F7, surface #FFFFFF, surface-2
+#F9F9FB, separator #E5E5EA (0.5px), label #1C1C1E, label-2 #636366 (texto secundario), label-3
+#8E8E93 (solo iconos decorativos, NUNCA texto), red #C8102E, red-pressed #A30D25, red-tint
+#FDECEF, yellow #FFCC00 (el texto encima siempre #1C1C1E), yellow-tint #FFF6D6, yellow-ink
+#7A5B00, green #34C759 solo para OK/operativo (texto sobre green-tint: #1E7B34, green-tint
+#E6F7EC).
+- Oscuro SOLO en la pantalla de alarma (#0E1116 con rojo #C8102E).
+- Uso del color: rojo = accion principal, alertas, no leido. Amarillo = tu turno, en servicio,
+destacados. Verde = operativo/OK. Todo lo demas, blanco y grises.
+- Tipografia: Inter (next/font) con font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+var(--font-inter), system-ui, sans-serif. Escala: titulo grande 34/700 (tracking -0.4), titulo
+22/700, encabezado 17/600, cuerpo 17/400, secundario 15/400, nota 13/400, caption 12/400.
+Mayusculas SOLO en encabezados de seccion de lista (13px, tracking .3px, label-2). Numeros y horas
+con tabular-nums. Prohibido Oswald, Source Sans 3 e IBM Plex Mono.
+- Formas: grupos y tarjetas radio 16px; botones radio 14px y alto 50px; chips pastilla; hojas con
+radio 20px arriba y grabber; separadores 0.5px; sin bordes gruesos ni negros; sombra maxima 0 1px
+2px rgba(0,0,0,.04).
+- Componentes: listas agrupadas (fila minima 44px con icono, titulo, valor y chevron), control
+segmentado, switch, hojas (bottom sheet), barra superior translucida (blur 20px, blanco 72%) con
+titulo grande que se encoge al scrollear, barra inferior de 5 items en celular (menos de 1024px),
+barra lateral de 260px en escritorio (1024px o mas).
+- Efectos: al presionar scale .97 y opacity .85 (150ms); transiciones 200ms
+cubic-bezier(.2,.8,.2,1); hojas suben con animacion; todo respeta prefers-reduced-motion.
+- Iconos: lucide, stroke 1.75, 22px, con aria-label si no llevan texto. Sin emojis.
+- Accesibilidad: area tactil minima 44px, contraste AA 4.5:1, foco visible rojo (outline 2px).
 ## Reglas de arquitectura (no romper)
 1. Login solo con numero de legajo. Sin contrasenas ni PIN. Sesion en cookie JWT (lib/session.ts,
  cookie guardia_bomberos_session).
@@ -98,3 +86,7 @@ Antes de tocar codigo: leer los archivos relacionados, explicar el plan en 5 lin
 implementar. Cambios chicos que compilen (npm run build sin errores). Si algo es ambiguo, elegir el
 default mas simple y decirlo al final. Si algo contradice este archivo, gana este archivo. Al terminar:
 listar archivos tocados, la migracion a correr y 3 pasos para probar a mano.
+- Cada prompt de diseno toca solo los archivos que nombra; mostrar diff y esperar OK; nunca ajustar
+ colores o pesos "en toda la app" fuera de globals.css.
+- El texto de interfaz va en espanol rioplatense (voseo) con tildes y enies correctas, aunque estos
+ prompts esten escritos sin tildes.

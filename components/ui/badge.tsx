@@ -8,17 +8,17 @@ type BadgeProps = {
 };
 
 const toneClasses: Record<Cargo, string> = {
-  "Oficial Principal": "border-fire/50 bg-fire/15 text-fire-soft font-bold",
-  "Oficial Ayudante": "border-ink/40 bg-ink/10 text-ink font-semibold",
-  Cabo: "border-brass/40 bg-brass/10 text-brass font-bold",
-  Bombero: "border-line bg-surface-hover text-ink-muted",
-  Aspirante: "border-line bg-bg-subtle text-ink-muted",
+  "Oficial Principal": "bg-red-tint text-red",
+  "Oficial Ayudante": "bg-surface-2 text-label-2",
+  Cabo: "bg-yellow text-label",
+  Bombero: "bg-green-tint text-green-ink",
+  Aspirante: "bg-surface-2 text-label-2",
 };
 
 export function Badge({ cargo, className = "" }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[12px] font-semibold leading-tight tracking-wide ${toneClasses[cargo]} ${className}`}
+      className={`inline-flex items-center rounded-full px-3 py-1 text-[13px] font-semibold leading-tight ${toneClasses[cargo]} ${className}`}
     >
       {cargo}
     </span>

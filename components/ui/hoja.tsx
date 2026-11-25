@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 type HojaProps = {
@@ -15,17 +15,11 @@ type HojaProps = {
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function Hoja({
-  open,
-  onClose,
-  title,
-  children,
-  footer,
-  className = "",
-}: HojaProps) {
+export function Hoja({ open, onClose, title, children, footer, className = "" }: HojaProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const tituloId = useId();
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -82,37 +76,39 @@ export function Hoja({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-          className="absolute inset-0 bg-bg/80 backdrop-blur-sm animate-fade-in"
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+      <button
+        type="button"
         onClick={onClose}
-        aria-hidden
+        aria-label="Cerrar"
+        className="absolute inset-0 cursor-default bg-label/40 backdrop-blur-[20px] animate-fade-in"
       />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={tituloId}
         tabIndex={-1}
-        className={`absolute inset-x-0 bottom-0 flex max-h-[85dvh] flex-col rounded-t-2xl border-t-4 border-fire bg-surface shadow-[0_-18px_56px_rgba(0,0,0,0.55)] animate-slide-up focus:outline-none sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-none sm:border-l-4 sm:border-t-0 sm:animate-fade-in ${className}`}
+        className={`relative flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-surface shadow-[0_-8px_32px_rgba(0,0,0,.12)] animate-sheet-up focus:outline-none sm:max-w-lg sm:rounded-[20px] sm:shadow-[0_8px_32px_rgba(0,0,0,.12)] sm:animate-fade-in ${className}`}
       >
-        <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="heading-display text-xl text-ink">{title}</h2>
+        <div aria-hidden className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-separator sm:hidden" />
+        <header className="flex items-start justify-between gap-3 border-b border-separator px-5 py-4">
+          <h2 id={tituloId} className="text-[22px] font-bold text-label">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted transition-colors hover:bg-bg-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+            className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
           >
-            <X className="h-5 w-5" aria-hidden />
+            <X size={22} strokeWidth={1.75} aria-hidden />
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto px-5 py-4 text-[16px] leading-relaxed text-ink">
+        <div className="flex-1 overflow-y-auto px-5 py-4 text-[17px] leading-relaxed text-label">
           {children}
         </div>
-        {footer ? (
-          <footer className="border-t border-line px-5 py-4">{footer}</footer>
-        ) : null}
+        {footer ? <footer className="border-t border-separator px-5 py-4">{footer}</footer> : null}
       </div>
     </div>
   );

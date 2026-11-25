@@ -27,23 +27,20 @@ export function EstadoVacio({
   className = "",
 }: EstadoVacioProps) {
   const ICONOS = Lucide as unknown as Record<string, LucideIcon>;
-  const Icono = ICONOS[icono] ?? ICONOS.AlertTriangle;
+  const Icono = ICONOS[icono] ?? ICONOS.CircleHelp;
+  const frase = texto ?? titulo;
+
   return (
-    <div
-      className={`flex flex-col items-center justify-center rounded-2xl border border-line bg-surface px-6 py-10 text-center ${className}`}
-    >
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-fire/10 text-fire-soft ring-1 ring-fire/25">
-        <Icono className="h-7 w-7" aria-hidden />
+    <div className={`flex flex-col items-center justify-center rounded-[16px] bg-surface px-6 py-10 text-center ${className}`}>
+      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] bg-surface-2 text-label-2">
+        <Icono size={22} strokeWidth={1.75} aria-hidden />
       </span>
-      <h3 className="heading-display mt-4 text-xl text-ink">{titulo}</h3>
-      {texto ? (
-        <p className="mt-2 max-w-md text-[16px] leading-relaxed text-ink-muted">{texto}</p>
-      ) : null}
+      <p className="max-w-md text-[17px] leading-relaxed text-label-2">{frase}</p>
       {accion ? (
         accion.href ? (
           <Link
             href={accion.href}
-            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-fire px-5 text-[15px] font-semibold text-ink shadow-[0_0_18px_rgba(198,40,40,0.22)] transition-colors hover:bg-fire-dark"
+            className="tap mt-5 inline-flex min-h-[50px] items-center justify-center rounded-[14px] bg-red px-5 text-[17px] font-semibold text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
           >
             {accion.label}
           </Link>

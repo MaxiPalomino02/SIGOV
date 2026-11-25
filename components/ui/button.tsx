@@ -9,24 +9,20 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const baseClasses =
-  "inline-flex min-h-11 cursor-pointer select-none items-center justify-center gap-2 rounded-[10px] whitespace-nowrap font-semibold leading-none transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]";
+  "tap inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-[14px] font-semibold leading-none transition-all duration-200 ease-[cubic-bezier(.2,.8,.2,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red disabled:pointer-events-none disabled:opacity-50";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "bg-fire text-ink shadow-[0_0_18px_rgba(198,40,40,0.22)] hover:bg-fire-dark active:bg-fire-dark",
-  secondary:
-    "border border-line bg-surface text-ink shadow-[0_1px_0_rgba(255,255,255,0.03)] hover:border-ink-muted/40 hover:bg-surface-hover",
-  ghost: "bg-transparent text-ink-muted hover:bg-surface-hover hover:text-ink",
-  danger:
-    "border border-fire-border bg-fire-light text-fire-text hover:bg-fire/20 active:bg-fire/20",
-  outline:
-    "border border-fire bg-surface text-fire hover:bg-fire hover:text-surface active:bg-fire",
+  primary: "bg-red text-surface hover:bg-red-pressed",
+  secondary: "border border-separator bg-surface text-red hover:bg-surface-2",
+  ghost: "bg-transparent text-red hover:bg-red-tint",
+  danger: "bg-red-tint text-red hover:bg-red hover:text-surface",
+  outline: "border border-red bg-surface text-red hover:bg-red-tint",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-11 px-3 text-[14px]",
-  md: "h-11 px-5 text-[15px]",
-  lg: "h-12 px-6 text-[15px]",
+  sm: "h-11 px-4 text-[15px]",
+  md: "h-[50px] px-5 text-[17px]",
+  lg: "h-[50px] px-6 text-[17px]",
 };
 
 export function Button({

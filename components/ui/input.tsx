@@ -25,12 +25,9 @@ export function Input({
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className={`flex flex-col gap-1.5 ${containerClassName}`}>
+    <div className={`flex flex-col gap-2 ${containerClassName}`}>
       {label ? (
-        <label
-          htmlFor={inputId}
-          className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted"
-        >
+        <label htmlFor={inputId} className="text-[15px] text-label-2">
           {label}
         </label>
       ) : null}
@@ -38,18 +35,16 @@ export function Input({
         id={inputId}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`min-h-11 w-full rounded-[10px] border bg-surface px-3.5 text-[16px] text-ink placeholder:text-ink-faint transition-colors focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/20 disabled:cursor-not-allowed disabled:bg-bg-subtle disabled:text-ink-muted ${
-          error ? "border-fire" : "border-line"
-        } ${className}`}
+        className={`min-h-[50px] w-full rounded-[14px] border border-separator bg-surface-2 px-4 text-[17px] text-label placeholder:text-label-3 transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
         {...props}
       />
       {hint ? (
-        <p id={hintId} className="text-[13px] text-ink-muted">
+        <p id={hintId} className="text-[13px] text-label-2">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-[13px] font-semibold text-fire-soft">
+        <p id={errorId} role="alert" className="text-[13px] font-semibold text-red">
           {error}
         </p>
       ) : null}
