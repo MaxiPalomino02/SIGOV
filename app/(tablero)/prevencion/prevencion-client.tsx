@@ -18,6 +18,7 @@ import {
 import { Aviso } from "@/components/ui/aviso";
 import { Button } from "@/components/ui/button";
 import { Contador } from "@/components/ui/contador";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
@@ -145,19 +146,19 @@ export function PrevencionClient({
   };
 
   return (
-    <div className="pb-10">
+    <div className="min-h-dvh bg-bg pb-24">
       <PageHeader
         titulo="Prevención"
         subtitulo="Charlas, inspecciones y simulacros del cuartel."
         acciones={
-          <Button onClick={abrirNueva} className="gap-2" aria-label="Cargar actividad">
+          <Button onClick={abrirNueva} aria-label="Cargar actividad" className="h-11 w-11 p-0 sm:w-auto sm:px-4 sm:gap-2">
             <Plus size={22} strokeWidth={1.75} aria-hidden />
             <span className="hidden sm:inline">Nueva</span>
           </Button>
         }
       />
 
-      <main className="mx-auto w-full max-w-[1100px] space-y-5 px-4 pt-5 lg:px-8">
+      <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5">
         {mensaje ? <Aviso variante={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
         {cargaError ? <Aviso variante="error">{cargaError}</Aviso> : null}
         {bomberosError ? (
@@ -196,21 +197,13 @@ export function PrevencionClient({
           ) : null}
         </section>
 
-        {actividades.length === 0 ? (
-          <div className="rounded-[16px] bg-surface px-6 py-12 text-center">
-            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-surface-2 text-label-2">
-              <ClipboardCheck size={28} strokeWidth={1.75} aria-hidden />
-            </span>
-            <p className="mt-4 text-[17px] font-semibold text-label">Todavía no hay actividades este mes</p>
-            <p className="mt-1 text-[15px] text-label-2">Cargá la primera charla, inspección o simulacro.</p>
-            <Button onClick={abrirNueva} className="mt-5">Cargar una</Button>
-          </div>
-        ) : actividadesMes.length === 0 ? (
-          <div className="rounded-[16px] bg-surface px-6 py-10 text-center">
-            <p className="text-[17px] font-semibold text-label">Todavía no hay actividades este mes</p>
-            <p className="mt-1 text-[15px] text-label-2">Podés cargar una actividad para {etiquetaMesLarga(mesSeleccionado).toLowerCase()}.</p>
-            <Button onClick={abrirNueva} className="mt-5">Cargar una</Button>
-          </div>
+        {actividadesMes.length === 0 ? (
+          <EstadoVacio
+            icono="ClipboardCheck"
+            titulo="Todavía no hay actividades este mes"
+            texto={actividades.length === 0 ? "Cargá la primera charla, inspección o simulacro." : `Podés cargar una actividad para ${etiquetaMesLarga(mesSeleccionado).toLowerCase()}.`}
+            accion={{ label: "Cargar una", onClick: abrirNueva }}
+          />
         ) : null}
 
         {gruposPorMes.map(([mes, lista]) => (
