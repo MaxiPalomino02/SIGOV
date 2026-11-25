@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { fraseAlarma, etiquetaAlarma } from "@/lib/alarma";
 import { responderAlarma } from "@/app/(tablero)/alarma/actions";
@@ -80,18 +81,19 @@ function formatearHora(iso: string) {
 }
 
 export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
-  const [alarma, setAlarma] = useState<AlarmaActiva | null>(() =>
-    leerAlarmaGuardada(sessionId)
-  );
+  const [alarma, setAlarma] = useState<AlarmaActiva | null>(null);
   const [miRespuesta, setMiRespuesta] = useState<"recibido" | "voy" | "no_puedo" | null>(null);
   const [respondida, setRespondida] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const sirenRef = useRef<{ stop: () => void } | null>(null);
   const voiceTimerRef = useRef<number | null>(null);
   const wakeLockRef = useRef<any>(null);
   const ultimaAlarmaId = useRef<string | null>(null);
+  const requestSeqRef = useRef(0);
+  const respondidaParaRef = useRef<string | null>(null);
 
   const detenerAlertas = useCallback(() => {
     sirenRef.current?.stop();
@@ -196,6 +198,8 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
   }, [detenerAlertas, hablar, iniciarSirena]);
 
   const consultarAlarma = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
+    const vigente = () => seq === requestSeqRef.current;
     try {
       const supabase = createBrowserSupabaseClient();
       // cerrar expiradas es best-effort vía RPC no expuesta a anon; filtramos por tiempo en cliente
@@ -205,20 +209,25 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
         .eq("activa", true)
         .order("activada_en", { ascending: false })
         .limit(1);
+      if (!vigente()) return;
       const row = (data ?? [])[0] as any;
       if (!row) {
         limpiarAlarmaGuardada(sessionId);
+        respondidaParaRef.current = null;
         setAlarma(null);
         setMiRespuesta(null);
         setRespondida(false);
+        setErrorMsg(null);
         return;
       }
       const expirada = Date.now() - new Date(row.activada_en).getTime() > AUTO_CIERRE_MS;
       if (expirada) {
         limpiarAlarmaGuardada(sessionId);
+        respondidaParaRef.current = null;
         setAlarma(null);
         setMiRespuesta(null);
         setRespondida(false);
+        setErrorMsg(null);
         return;
       }
       const a: AlarmaActiva = {
@@ -234,10 +243,17 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
         .eq("alarma_id", a.id)
         .eq("bombero_id", sessionId)
         .maybeSingle();
+      if (!vigente()) return;
       if (resp?.respuesta) {
+        respondidaParaRef.current = a.id;
         setMiRespuesta(resp.respuesta as any);
         setRespondida(true);
+        setErrorMsg(null);
+      } else if (respondidaParaRef.current === a.id) {
+        // respuesta local optimista reciente; no pisar con lectura vacía vieja
+        setRespondida(true);
       } else {
+        setMiRespuesta(null);
         setRespondida(false);
       }
     } catch {
@@ -246,6 +262,8 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
   }, [sessionId]);
 
   useEffect(() => {
+    const guardada = leerAlarmaGuardada(sessionId);
+    if (guardada) queueMicrotask(() => setAlarma((actual) => actual ?? guardada));
     void consultarAlarma();
     const id = window.setInterval(() => void consultarAlarma(), 15000);
     const onVis = () => { if (document.visibilityState === "visible") void consultarAlarma(); };
@@ -254,7 +272,7 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [consultarAlarma]);
+  }, [consultarAlarma, sessionId]);
 
   useEffect(() => {
     let chA: any = null;
@@ -274,13 +292,18 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     if (!alarma) {
       ultimaAlarmaId.current = null;
+      respondidaParaRef.current = null;
       detenerAlertas();
       return;
     }
     if (ultimaAlarmaId.current !== alarma.id) {
       ultimaAlarmaId.current = alarma.id;
-      setRespondida(false);
-      setMiRespuesta(null);
+      if (respondidaParaRef.current !== alarma.id) {
+        respondidaParaRef.current = null;
+        setRespondida(false);
+        setMiRespuesta(null);
+        setErrorMsg(null);
+      }
     }
     if (!respondida) {
       void iniciarAlertas(alarma);
@@ -297,13 +320,23 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
   const onResponder = async (r: "recibido" | "voy" | "no_puedo") => {
     if (!alarma) return;
     setBusy(true);
+    setErrorMsg(null);
     const res = await responderAlarma(alarma.id, r);
     setBusy(false);
     if (res.ok) {
+      respondidaParaRef.current = alarma.id;
       limpiarAlarmaGuardada(sessionId);
       setMiRespuesta(r);
       setRespondida(true);
       detenerAlertas();
+      void consultarAlarma();
+      return;
+    }
+    setErrorMsg(res.error);
+    if (res.error === "La alarma ya no está activa.") {
+      limpiarAlarmaGuardada(sessionId);
+      respondidaParaRef.current = null;
+      void consultarAlarma();
     }
   };
 
@@ -317,69 +350,106 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
 
   if (!alarma) return null;
 
-  const mostrarOverlay = !respondida;
   const etiqueta = etiquetaAlarma(alarma.tipo);
+  const textoRespuesta =
+    miRespuesta === "voy" ? "Voy" : miRespuesta === "no_puedo" ? "No puedo" : "Recibido";
+
+  if (respondida) {
+    return (
+      <div
+        className="no-print fixed inset-x-0 bottom-20 z-[60] mx-3 mb-2 lg:bottom-4"
+        role="status"
+        aria-label="Respuesta de alarma registrada"
+      >
+        <div className="rounded-[16px] bg-alarma-superficie p-4 text-surface">
+          <p className="text-[13px] text-alarma-secundario">Alarma activa</p>
+          <p className="mt-1 text-[17px] font-bold">
+            {etiqueta}
+            {alarma.es_simulacro ? " · Simulacro" : ""}
+          </p>
+          <p className="mt-1 text-[15px] text-separator">Respuesta registrada: {textoRespuesta}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      className={`${mostrarOverlay ? "fixed inset-0 z-[100] flex flex-col" : "fixed inset-x-0 bottom-20 z-[60] mx-3 mb-2 lg:bottom-4"} `}
-      role={mostrarOverlay ? "alertdialog" : "status"}
+      className="fixed inset-0 z-[100] flex flex-col bg-alarma-bg text-surface"
+      role="alertdialog"
       aria-label="Alarma activa"
     >
-      {mostrarOverlay ? (
-        <div className="flex h-full flex-col bg-bg text-ink">
-          <div className="alarma-stripe h-3 w-full bg-fire" aria-hidden />
-          {alarma.es_simulacro ? (
-            <div className="mx-4 mt-4 rounded-lg border border-brass bg-brass-light px-4 py-2 text-center font-mono text-sm font-bold uppercase tracking-widest text-brass">
-              Simulacro
-            </div>
-          ) : null}
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 text-center">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-ink-muted">Alarma activa · {formatearHora(alarma.activada_en)}</p>
-            <h1 className="heading-display text-4xl leading-tight sm:text-5xl">{etiqueta}</h1>
-            {alarma.detalle ? (
-              <p className="max-w-xl text-lg text-ink-muted">{alarma.detalle}</p>
-            ) : null}
-            {alarma.es_simulacro ? (
-              <p className="font-mono text-xs uppercase tracking-widest text-brass">Esto es un simulacro</p>
-            ) : null}
+      <div className="alarma-franja h-3 w-full shrink-0 bg-red" aria-hidden />
+      {alarma.es_simulacro ? (
+        <div className="mx-5 mt-5 self-start rounded-full bg-yellow px-4 py-2 text-[17px] font-extrabold text-label">
+          SIMULACRO
+        </div>
+      ) : null}
 
-            {bloqueado ? (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-5 pb-6 text-center">
+        <p className="num text-[17px] text-alarma-secundario">
+          Alarma activa · {formatearHora(alarma.activada_en)}
+        </p>
+        <h1 className="line-clamp-2 max-w-[22ch] text-[44px] font-extrabold leading-[1.05] tracking-[-.4px] text-surface">
+          {etiqueta}
+        </h1>
+        {alarma.detalle ? (
+          <p className="max-w-xl text-[22px] font-medium leading-snug text-separator">{alarma.detalle}</p>
+        ) : null}
+
+        {bloqueado ? (
+          <button
+            type="button"
+            onClick={onActivarSonido}
+            className="tap mt-2 flex min-h-[64px] w-full max-w-xl items-center justify-center rounded-[18px] bg-yellow px-6 text-[17px] font-extrabold text-label"
+          >
+            Tocar para activar sonido
+          </button>
+        ) : null}
+
+        <div className="mt-2 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+          {([
+            ["recibido", "Recibido", "bg-surface text-label"],
+            ["voy", "Voy", "bg-red text-surface"],
+            ["no_puedo", "No puedo", "bg-alarma-superficie text-surface"],
+          ] as const).map(([valor, texto, colores]) => {
+            const elegido = miRespuesta === valor;
+            return (
               <button
+                key={valor}
                 type="button"
-                onClick={onActivarSonido}
-                className="mt-2 w-full max-w-md rounded-2xl border-2 border-fire bg-fire px-6 py-6 text-xl font-bold text-ink shadow-[0_0_30px_rgba(198,40,40,0.35)]"
+                disabled={busy}
+                aria-pressed={elegido}
+                onClick={() => void onResponder(valor)}
+                className={`tap flex min-h-16 items-center justify-center gap-2 rounded-[18px] px-4 text-[17px] font-bold transition-all ${colores} ${
+                  elegido ? "" : miRespuesta ? "opacity-40" : ""
+                }`}
               >
-                Tocar para activar sonido
+                {elegido ? <Check size={22} strokeWidth={2.25} aria-hidden /> : null}
+                {texto}
               </button>
-            ) : null}
-
-            <div className="mt-4 grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-3">
-              <button type="button" disabled={busy} onClick={() => void onResponder("recibido")} className="min-h-[64px] rounded-xl border border-line bg-surface px-4 text-lg font-bold text-ink hover:bg-surface-hover disabled:opacity-50">Recibido</button>
-              <button type="button" disabled={busy} onClick={() => void onResponder("voy")} className="min-h-[64px] rounded-xl border border-fire bg-fire/20 px-4 text-lg font-bold text-ink hover:bg-fire/30 disabled:opacity-50">Voy</button>
-              <button type="button" disabled={busy} onClick={() => void onResponder("no_puedo")} className="min-h-[64px] rounded-xl border border-line bg-surface px-4 text-lg font-bold text-ink hover:bg-surface-hover disabled:opacity-50">No puedo</button>
-            </div>
-
-            <p className="mt-4 max-w-md text-center font-mono text-[13px] uppercase tracking-widest text-ink-secondary">
-              Con la app cerrada o el celular bloqueado la alarma depende de las notificaciones del sistema; no suena en modo silencio. Complementa, no reemplaza, la sirena y la radio.
-            </p>
-          </div>
+            );
+          })}
         </div>
-      ) : (
-        <div className="rounded-xl border border-fire/60 bg-surface p-3 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-          <p className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">Alarma activa</p>
-          <p className="heading-display text-lg text-ink">{etiqueta}{alarma.es_simulacro ? " (Simulacro)" : ""}</p>
-          <p className="mt-1 text-[13px] text-ok">Respuesta registrada: {miRespuesta === "voy" ? "Voy" : miRespuesta === "no_puedo" ? "No puedo" : "Recibido"}</p>
-        </div>
-      )}
+        {errorMsg ? (
+          <p role="status" className="w-full max-w-xl rounded-[14px] bg-red-tint px-4 py-3 text-center text-[15px] font-medium text-red">
+            {errorMsg}
+          </p>
+        ) : null}
+      </div>
+
+      <p className="px-5 pb-[max(20px,env(safe-area-inset-bottom))] text-center text-[13px] text-alarma-secundario">
+        Complementa la sirena y la radio. Con la app cerrada depende de las notificaciones del sistema.
+      </p>
+
       <style jsx global>{`
-        @keyframes alarma-stripe {
+        @keyframes alarma-franja {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.2; }
         }
-        .alarma-stripe { animation: alarma-stripe 1s linear infinite; }
+        .alarma-franja { animation: alarma-franja 1s linear infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .alarma-stripe { animation: none; opacity: 1; }
+          .alarma-franja { animation: none; opacity: 1; }
         }
       `}</style>
     </div>
