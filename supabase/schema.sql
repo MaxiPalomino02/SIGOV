@@ -1,0 +1,268 @@
+-- ============================================================
+-- Guardia Bomberos La Trinidad — Schema inicial
+-- Stack: Supabase (Postgres + Auth)
+-- Ejecutar en el SQL Editor del dashboard de Supabase.
+-- ============================================================
+
+create extension if not exists pgcrypto;
+
+-- ============================================================
+-- Tabla: bomberos
+-- ============================================================
+create table if not exists public.bomberos (
+  id              uuid primary key default gen_random_uuid(),
+  numero_ingreso  integer not null,
+  nombre_completo text    not null,
+  cargo           text    not null check (
+                    cargo in (
+                      'Oficial Principal',
+                      'Oficial Ayudante',
+                      'Cabo',
+                      'Bombero',
+                      'Aspirante'
+                    )
+                  ),
+  activo          boolean not null default true,
+  created_at      timestamptz not null default now()
+);
+
+-- El legajo debe ser único entre bomberos ACTIVOS: un bombero dado de baja
+-- (activo = false) libera su número para poder re-ingresar a otra persona
+-- con el mismo legajo. Idempotente para bases existentes (antes era UNIQUE
+-- global: bomberos_numero_ingreso_key).
+alter table public.bomberos drop constraint if exists bomberos_numero_ingreso_key;
+create unique index if not exists bomberos_numero_activo_uniq
+  on public.bomberos (numero_ingreso)
+  where activo;
+
+-- ============================================================
+-- Tabla: turnos
+-- ============================================================
+create table if not exists public.turnos (
+  id         uuid primary key default gen_random_uuid(),
+  fecha      date not null,
+  franja     text not null check (
+               franja in (
+                 '08:00-13:00',
+                 '13:00-18:00',
+                 '18:00-23:00',
+                 '23:00-08:00'
+               )
+             ),
+  bombero_id uuid references public.bomberos (id),
+  created_at timestamptz not null default now()
+);
+
+-- Cupo por celda (fecha + franja): hasta 5 personas (ver la tabla
+-- configuracion, clave 'cupo_maximo_turnos'). Cada anotación es una fila
+-- propia con su bombero_id; la celda crece en alto con las anotaciones.
+--
+-- Migración de esquemas viejos: el índice único parcial que impedía DOS
+-- personas en la misma celda (turnos_celda_ocupada_uniq) ya no existe en
+-- este diseño y se elimina si quedó en la base. Idempotente.
+drop index if exists public.turnos_celda_ocupada_uniq;
+
+-- El MISMO bombero no puede anotarse dos veces en la misma celda exacta
+-- (fecha + franja). Es el único índice único del esquema de cupo: los NULL
+-- son libres, así una cancelación (bombero_id = null) libera su lugar sin
+-- afectar a las demás personas anotadas en la misma celda.
+create unique index if not exists turnos_celda_bombero_uniq
+  on public.turnos (fecha, franja, bombero_id)
+  where bombero_id is not null;
+
+-- Un bombero puede tener guardias en varios días/franjas a la vez.
+-- La única restricción de duplicado es (fecha, franja, bombero_id) de arriba.
+
+-- Migración de esquemas viejos: la restricción "un bombero = una sola
+-- guardia" (turnos_bombero_activo_uniq) ya no existe en este diseño y hay
+-- que eliminarla si quedó en la base. Idempotente: si no existe, no hace nada.
+alter table public.turnos drop constraint if exists turnos_bombero_activo_uniq;
+drop index if exists public.turnos_bombero_activo_uniq;
+
+-- Índices de apoyo para las consultas más frecuentes
+create index if not exists idx_turnos_fecha
+  on public.turnos (fecha);
+create index if not exists idx_turnos_bombero_id
+  on public.turnos (bombero_id);
+
+-- ============================================================
+-- Tabla: configuracion
+-- Parámetros de negocio del tablero. Fuente única del cupo máximo por
+-- celda (fecha + franja): las RPC de anotación lo leen en cada operación,
+-- así se puede subir/bajar el cupo desde el dashboard sin tocar código.
+-- ============================================================
+create table if not exists public.configuracion (
+  clave text primary key,
+  valor integer not null
+);
+
+insert into public.configuracion (clave, valor)
+values ('cupo_maximo_turnos', 5)
+on conflict (clave) do nothing;
+
+-- ============================================================
+-- Tabla: historial_cambios
+-- ============================================================
+create table if not exists public.historial_cambios (
+  id                uuid primary key default gen_random_uuid(),
+  turno_id          uuid not null references public.turnos (id),
+  bombero_id        uuid not null references public.bomberos (id),
+  accion            text not null check (
+                      accion in ('anoto', 'cancelo', 'cambio')
+                    ),
+  turno_anterior_id uuid references public.turnos (id),
+  nota              text,
+  timestamp         timestamptz not null default now()
+);
+
+-- Nota opcional al cancelar (motivo). Idempotente para bases existentes.
+alter table public.historial_cambios
+  add column if not exists nota text;
+
+create index if not exists idx_historial_turno_id
+  on public.historial_cambios (turno_id);
+create index if not exists idx_historial_bombero_id
+  on public.historial_cambios (bombero_id);
+
+-- ============================================================
+-- Row Level Security (RLS)
+-- ============================================================
+alter table public.bomberos enable row level security;
+alter table public.turnos enable row level security;
+alter table public.historial_cambios enable row level security;
+alter table public.configuracion enable row level security;
+
+-- Lectura de bomberos: también pública para anónimos (anon), porque la
+-- pantalla de login (sin sesión) busca el numero_ingreso y muestra la lista
+-- de referencia "¿No recordás tu número?".
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'bomberos' and policyname = 'bomberos_select_anon'
+  ) then
+    create policy "bomberos_select_anon"
+      on public.bomberos
+      for select
+      to anon
+      using (true);
+  end if;
+end
+$$;
+
+-- Lectura: cualquier usuario autenticado puede ver bomberos y turnos.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'bomberos' and policyname = 'bomberos_select_authenticated'
+  ) then
+    create policy "bomberos_select_authenticated"
+      on public.bomberos
+      for select
+      to authenticated
+      using (true);
+  end if;
+end
+$$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'turnos' and policyname = 'turnos_select_authenticated'
+  ) then
+    create policy "turnos_select_authenticated"
+      on public.turnos
+      for select
+      to authenticated
+      using (true);
+  end if;
+end
+$$;
+
+-- Lectura pública de turnos para el tablero en vivo: la suscripción Realtime
+-- y el refresh del navegador usan la anon key. Se crea dentro de un bloque
+-- idempotente para poder re-ejecutar el archivo sin error.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'turnos' and policyname = 'turnos_select_anon'
+  ) then
+    create policy "turnos_select_anon"
+      on public.turnos
+      for select
+      to anon
+      using (true);
+  end if;
+end
+$$;
+
+-- Lectura del historial para el log de despacho (/historial): tanto anon
+-- como authenticated, porque la página y la suscripción Realtime usan la
+-- anon key desde el navegador. Idempotente para poder re-ejecutar el archivo.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'historial_cambios' and policyname = 'historial_select_anon'
+  ) then
+    create policy "historial_select_anon"
+      on public.historial_cambios
+      for select
+      to anon
+      using (true);
+  end if;
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'historial_cambios' and policyname = 'historial_select_authenticated'
+  ) then
+    create policy "historial_select_authenticated"
+      on public.historial_cambios
+      for select
+      to authenticated
+      using (true);
+  end if;
+end
+$$;
+
+-- Lectura de configuracion (cupo máximo): tanto anon como authenticated,
+-- porque el tablero la lee con la anon key desde el servidor y el navegador.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'configuracion' and policyname = 'configuracion_select_anon'
+  ) then
+    create policy "configuracion_select_anon"
+      on public.configuracion
+      for select
+      to anon
+      using (true);
+  end if;
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public' and tablename = 'configuracion' and policyname = 'configuracion_select_authenticated'
+  ) then
+    create policy "configuracion_select_authenticated"
+      on public.configuracion
+      for select
+      to authenticated
+      using (true);
+  end if;
+end
+$$;
+
+-- Escritura: NO se definen políticas de insert/update/delete directas.
+-- RLS deniega por defecto. Toda modificación de turnos e historial se hace
+-- mediante las funciones RPC (SECURITY DEFINER) de supabase/rpc.sql, llamadas
+-- únicamente desde los server actions con la clave service_role del servidor.

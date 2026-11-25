@@ -1,0 +1,919 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Sistema de diseño — SIGOV (producto; instalación configurable)
+   Tema oscuro institucional (tokens)
+   ============================================================ */
+
+:root {
+  /* Identidad SIGOV V4 — fondo carbón institucional */
+  --sigov-bg: #101317;
+  --sigov-bg-subtle: #171b21;
+
+  /* Superficies y paneles grafito */
+  --sigov-surface: #20252b;
+  --sigov-surface-hover: #272d34;
+
+  /* Tipografía */
+  --sigov-ink: #f5f5f5;
+  --sigov-ink-muted: #b9bec5;
+  --sigov-ink-faint: #99a1a9;
+
+  /* Rojo institucional SIGOV (acento) */
+  --sigov-fire: #c62828;
+  --sigov-fire-dark: #a61f1f;
+  --sigov-fire-soft: #ff9a9a;
+  --sigov-fire-light: rgba(198, 40, 40, 0.14);
+  --sigov-fire-border: rgba(198, 40, 40, 0.4);
+
+  /* Latón — Mi turno y confirmaciones */
+  --sigov-brass: #d6b25e;
+  --sigov-brass-soft: #ecd08a;
+  --sigov-brass-light: rgba(214, 178, 94, 0.12);
+  --sigov-brass-border: rgba(214, 178, 94, 0.35);
+
+  /* Ámbar — En servicio ahora y avisos */
+  --sigov-alarm: #e6a23c;
+  --sigov-alarm-soft: #f2c477;
+  --sigov-alarm-light: rgba(230, 162, 60, 0.12);
+  --sigov-alarm-border: rgba(230, 162, 60, 0.35);
+
+  /* Verde — solo Operativo / OK */
+  --sigov-ok: #35b57c;
+
+  /* Líneas y bordes */
+  --sigov-line: #454b53;
+  --sigov-line-subtle: #343a42;
+}
+
+@theme inline {
+  --color-bg: var(--sigov-bg);
+  --color-bg-subtle: var(--sigov-bg-subtle);
+  --color-surface: var(--sigov-surface);
+  --color-surface-hover: var(--sigov-surface-hover);
+  --color-ink: var(--sigov-ink);
+  --color-ink-muted: var(--sigov-ink-muted);
+  --color-ink-faint: var(--sigov-ink-faint);
+  --color-fire: var(--sigov-fire);
+  --color-fire-dark: var(--sigov-fire-dark);
+  --color-fire-soft: var(--sigov-fire-soft);
+  --color-fire-light: var(--sigov-fire-light);
+  --color-fire-border: var(--sigov-fire-border);
+  --color-brass: var(--sigov-brass);
+  --color-brass-soft: var(--sigov-brass-soft);
+  --color-brass-light: var(--sigov-brass-light);
+  --color-brass-border: var(--sigov-brass-border);
+  --color-alarm: var(--sigov-alarm);
+  --color-alarm-soft: var(--sigov-alarm-soft);
+  --color-alarm-light: var(--sigov-alarm-light);
+  --color-alarm-border: var(--sigov-alarm-border);
+  --color-ok: var(--sigov-ok);
+  --color-line: var(--sigov-line);
+  --color-line-subtle: var(--sigov-line-subtle);
+
+  --font-sans: var(--font-source-sans);
+  --font-display: var(--font-oswald);
+  --font-mono: var(--font-plex-mono);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--sigov-bg);
+    color: var(--sigov-ink);
+    font-family: var(--font-source-sans), system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--sigov-fire-soft);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--sigov-fire);
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  .heading-display {
+    font-family: var(--font-oswald), sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  /* Glassmorphism oscuro para header institucional */
+  .glass-header {
+    background: rgba(16, 19, 23, 0.88);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border-bottom: 1px solid var(--sigov-line);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Tarjeta premium con elevación limpia sobre fondo carbón */
+  .card-premium {
+    background: var(--sigov-surface);
+    border: 1px solid var(--sigov-line);
+    border-radius: 12px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.22);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Fondo de marca: retícula sutil para login y pantalla de alarma */
+  .fondo-marca {
+    background-color: var(--sigov-bg);
+    background-image:
+      radial-gradient(circle at 18% 8%, rgba(198, 40, 40, 0.16), transparent 42%),
+      radial-gradient(circle at 82% 88%, rgba(245, 245, 245, 0.06), transparent 38%),
+      linear-gradient(rgba(245, 245, 245, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 245, 245, 0.035) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+  }
+}
+
+/* ── ANIMACIONES ─────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.75); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15%       { transform: translateX(-5px); }
+  30%       { transform: translateX(4px); }
+  45%       { transform: translateX(-3px); }
+  60%       { transform: translateX(2px); }
+  75%       { transform: translateX(-1px); }
+}
+
+@layer utilities {
+  .animate-fade-in    { animation: fade-in 0.4s ease both; }
+  .animate-slide-up   { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-slide-down { animation: slide-down 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-scale-in   { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .animate-pulse-dot  { animation: pulse-dot 2s ease-in-out infinite; }
+  .animate-shake      { animation: shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Impresión — Planilla de guardias (A4 horizontal)
+   ============================================================ */
+.print-only {
+  display: none;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 7mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .planilla-impresion {
+    width: 100%;
+    color: #000;
+    font-family: Arial, Helvetica, "Source Sans 3", sans-serif;
+  }
+
+  .planilla-encabezado {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 2px 6px;
+    margin-bottom: 6px;
+    border-bottom: 2px solid #000;
+  }
+
+  .planilla-escudo {
+    flex-shrink: 0;
+    object-fit: contain;
+    filter: grayscale(1);
+  }
+
+  .planilla-nombre {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+  }
+
+  .planilla-titulo {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+
+  .planilla-rango {
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .planilla-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .planilla-tabla th,
+  .planilla-tabla td {
+    border: 1px solid #000;
+    padding: 0 4px;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .planilla-tabla thead th {
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .planilla-tabla tbody th {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .planilla-nombre-linea {
+    white-space: nowrap;
+  }
+
+  .planilla-vacio {
+    color: #444;
+  }
+
+  .planilla-tabla tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .planilla-semana {
+    font-size: 11pt;
+  }
+
+  .planilla-semana .planilla-escudo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .planilla-semana .planilla-nombre {
+    font-size: 15pt;
+  }
+
+  .planilla-semana .planilla-titulo {
+    font-size: 13pt;
+  }
+
+  .planilla-semana .planilla-rango {
+    font-size: 11pt;
+  }
+
+  .planilla-semana .planilla-tabla thead th {
+    font-size: 11pt;
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+
+  .planilla-semana .planilla-tabla tbody th {
+    font-size: 11pt;
+    width: 88px;
+  }
+
+  .planilla-semana .planilla-tabla tbody td {
+    font-size: 11pt;
+    line-height: 1.2;
+  }
+
+  .planilla-compacta {
+    font-size: 8pt;
+  }
+
+  .planilla-compacta .planilla-escudo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .planilla-compacta .planilla-nombre {
+    font-size: 11pt;
+  }
+
+  .planilla-compacta .planilla-titulo {
+    font-size: 9.5pt;
+  }
+
+  .planilla-compacta .planilla-rango {
+    font-size: 8.5pt;
+  }
+
+  .planilla-compacta .planilla-tabla thead th {
+    font-size: 8pt;
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+
+  .planilla-compacta .planilla-tabla tbody th {
+    font-size: 8pt;
+    width: 60px;
+  }
+
+  .planilla-compacta .planilla-tabla tbody td {
+    font-size: 7pt;
+    line-height: 1;
+  }
+}
+
+/* ============================================================
+   Tokens nuevos - modulos (Prompt 3)
+   ============================================================ */
+@theme inline {
+  --color-ok: #35b57c;
+  --color-smn-amarilla: #ffc21a;
+  --color-smn-naranja: #ff7a1a;
+  --color-smn-roja: #c62828;
+}
+
+/* ============================================================
+   Impresión — la planilla oficial vuelve a papel blanco
+   aunque la interfaz use la identidad oscura.
+   ============================================================ */
+@media print {
+  :root {
+    --sigov-bg: #ffffff;
+    --sigov-bg-subtle: #f3f3f3;
+    --sigov-surface: #ffffff;
+    --sigov-surface-hover: #f7f7f7;
+    --sigov-ink: #000000;
+    --sigov-ink-muted: #333333;
+    --sigov-ink-faint: #555555;
+    --sigov-line: #000000;
+    --sigov-line-subtle: #999999;
+    --sigov-fire: #c62828;
+    --sigov-fire-dark: #a61f1f;
+    --sigov-fire-soft: #8a1414;
+    --sigov-fire-light: #f7e8e8;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .glass-header {
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ============================================================
+   Identidad SIGOV — ajuste fino de tokens
+   ============================================================ */
+@theme inline {
+  --color-fire-text: var(--sigov-fire-text);
+  --color-ok: var(--sigov-ok);
+  --color-smn-amarilla: #ffc21a;
+  --color-smn-naranja: #ff7a1a;
+  --color-smn-roja: #c62828;
+}
+
+@media screen {
+  :root {
+    --sigov-bg: #101317;
+    --sigov-bg-subtle: #171b20;
+    --sigov-surface: #20252b;
+    --sigov-surface-hover: #272d34;
+    --sigov-ink: #f5f5f5;
+    --sigov-ink-muted: #b9bec5;
+    --sigov-ink-faint: #8b929b;
+    --sigov-fire: #c62828;
+    --sigov-fire-dark: #a11f1f;
+    --sigov-fire-text: #ff6b6b;
+    --sigov-fire-soft: #ff6b6b;
+    --sigov-fire-light: rgba(198, 40, 40, 0.14);
+    --sigov-fire-border: rgba(198, 40, 40, 0.4);
+    --sigov-brass: #d9b56a;
+    --sigov-brass-soft: #ecd08a;
+    --sigov-brass-light: rgba(217, 181, 106, 0.12);
+    --sigov-brass-border: rgba(217, 181, 106, 0.35);
+    --sigov-alarm: #f0a94a;
+    --sigov-alarm-soft: #f7c17a;
+    --sigov-alarm-light: rgba(240, 169, 74, 0.12);
+    --sigov-alarm-border: rgba(240, 169, 74, 0.35);
+    --sigov-ok: #4ade80;
+    --sigov-line: #454b53;
+    --sigov-line-subtle: #2e343b;
+  }
+}
+
+@media print {
+  :root {
+    --sigov-fire-text: #8a1414;
+  }
+}
+
+/* ============================================================
+   Tema oscuro SIGOV (override final por cascada, sin @layer)
+   ============================================================ */
+:root {
+  --color-bg: #101317;
+  --color-bg-subtle: #171b20;
+  --color-surface: #20252b;
+  --color-surface-hover: #272d34;
+  --color-ink: #f5f5f5;
+  --color-ink-muted: #b9bec5;
+  --color-ink-faint: #8b929b;
+  --color-line: #454b53;
+  --color-line-subtle: #2e343b;
+  --color-fire: #c62828;
+  --color-fire-dark: #a11f1f;
+  --color-fire-light: rgba(198, 40, 40, 0.16);
+  --color-fire-border: rgba(198, 40, 40, 0.45);
+  --color-brass: #d9b56a;
+  --color-brass-light: rgba(217, 181, 106, 0.12);
+  --color-brass-border: rgba(217, 181, 106, 0.35);
+  --color-alarm: #f0a94a;
+  --color-alarm-light: rgba(240, 169, 74, 0.12);
+  --color-alarm-border: rgba(240, 169, 74, 0.35);
+}
+
+@theme inline {
+  --color-fire-text: #ff6b6b;
+  --color-ok: #4ade80;
+  --color-ok-light: rgba(74, 222, 128, 0.12);
+  --color-error-light: rgba(198, 40, 40, 0.14);
+  --color-error-border: rgba(198, 40, 40, 0.45);
+  --color-error-text: #ff6b6b;
+}
+
+html {
+  color-scheme: dark;
+}
+
+/* .glass-header: barra sólida oscura (evita traslucidez al hacer scroll) */
+.glass-header {
+  background: #101317 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 2px solid #c62828 !important;
+  box-shadow: inset 0 -1px 0 #454b53, 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Impresión: tokens claros originales para planillas y PDF */
+@media print {
+  :root {
+    --color-bg: #ffffff;
+    --color-bg-subtle: #f3f4f6;
+    --color-surface: #ffffff;
+    --color-surface-hover: #f9fafb;
+    --color-ink: #111827;
+    --color-ink-muted: #4b5563;
+    --color-ink-faint: #6b7280;
+    --color-line: #d1d5db;
+    --color-line-subtle: #e5e7eb;
+    --color-fire: #c62828;
+    --color-fire-dark: #a11f1f;
+    --color-fire-light: rgba(198, 40, 40, 0.12);
+    --color-fire-border: rgba(198, 40, 40, 0.35);
+    --color-brass: #d9b56a;
+    --color-brass-light: rgba(217, 181, 106, 0.12);
+    --color-brass-border: rgba(217, 181, 106, 0.35);
+    --color-alarm: #f0a94a;
+    --color-alarm-light: rgba(240, 169, 74, 0.12);
+    --color-alarm-border: rgba(240, 169, 74, 0.35);
+    --color-fire-text: #8a1414;
+    --color-ok: #16a34a;
+    --color-ok-light: rgba(22, 163, 74, 0.12);
+    --color-error-light: rgba(198, 40, 40, 0.08);
+    --color-error-border: rgba(198, 40, 40, 0.35);
+    --color-error-text: #991b1b;
+  }
+
+  html {
+    color-scheme: light;
+  }
+}
+
+@media print {
+  .reportes-print {
+    font-size: 9pt;
+  }
+
+  .reportes-print h2 {
+    margin-top: 8mm;
+    margin-bottom: 2mm;
+    font-size: 11pt;
+  }
+
+  .reportes-print .planilla-tabla {
+    margin-bottom: 3mm;
+  }
+
+  .reportes-print .planilla-tabla th,
+  .reportes-print .planilla-tabla td {
+    padding: 1.5mm 2mm;
+  }
+}
+
+/* ============================================================
+   Utilidades de rediseño (agregadas al final)
+   ============================================================ */
+.titulo-pagina {
+  font-family: var(--font-oswald), sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+
+.titulo-tarjeta {
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.35;
+  color: var(--color-ink);
+}
+
+.texto-aux {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-ink-muted);
+}
+
+.dato-mono {
+  font-family: var(--font-plex-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+@media screen {
+  :root {
+    --sigov-bg: #f2f5f3;
+    --sigov-bg-subtle: #e9eeea;
+    --sigov-surface: #ffffff;
+    --sigov-surface-hover: #f8faf8;
+    --sigov-ink: #141a18;
+    --sigov-ink-muted: #586660;
+    --sigov-ink-faint: #7f8b85;
+    --sigov-fire: #c8102e;
+    --sigov-fire-dark: #a30d25;
+    --sigov-fire-soft: #c8102e;
+    --sigov-fire-text: #c8102e;
+    --sigov-fire-light: rgba(200, 16, 46, 0.08);
+    --sigov-fire-border: rgba(200, 16, 46, 0.28);
+    --sigov-brass: #96702e;
+    --sigov-brass-soft: #7a5a22;
+    --sigov-brass-light: rgba(150, 112, 46, 0.10);
+    --sigov-brass-border: rgba(150, 112, 46, 0.32);
+    --sigov-alarm: #c2690b;
+    --sigov-alarm-soft: #9a5208;
+    --sigov-alarm-light: rgba(194, 105, 11, 0.10);
+    --sigov-alarm-border: rgba(194, 105, 11, 0.30);
+    --sigov-ok: #2f7d4f;
+    --sigov-line: #d9e0db;
+    --sigov-line-subtle: #e8ede9;
+    --color-bg: var(--sigov-bg);
+    --color-bg-subtle: var(--sigov-bg-subtle);
+    --color-surface: var(--sigov-surface);
+    --color-surface-hover: var(--sigov-surface-hover);
+    --color-ink: var(--sigov-ink);
+    --color-ink-muted: var(--sigov-ink-muted);
+    --color-ink-faint: var(--sigov-ink-faint);
+    --color-fire: var(--sigov-fire);
+    --color-fire-dark: var(--sigov-fire-dark);
+    --color-fire-soft: var(--sigov-fire-soft);
+    --color-fire-text: var(--sigov-fire-text);
+    --color-fire-light: var(--sigov-fire-light);
+    --color-fire-border: var(--sigov-fire-border);
+    --color-brass: var(--sigov-brass);
+    --color-brass-soft: var(--sigov-brass-soft);
+    --color-brass-light: var(--sigov-brass-light);
+    --color-brass-border: var(--sigov-brass-border);
+    --color-alarm: var(--sigov-alarm);
+    --color-alarm-soft: var(--sigov-alarm-soft);
+    --color-alarm-light: var(--sigov-alarm-light);
+    --color-alarm-border: var(--sigov-alarm-border);
+    --color-ok: var(--sigov-ok);
+    --color-ok-light: rgba(47, 125, 79, 0.10);
+    --color-error-light: var(--sigov-fire-light);
+    --color-error-border: var(--sigov-fire-border);
+    --color-error-text: var(--sigov-fire-text);
+    --color-line: var(--sigov-line);
+    --color-line-subtle: var(--sigov-line-subtle);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  .glass-header {
+    background: var(--sigov-surface) !important;
+    backdrop-filter: blur(12px) saturate(140%);
+    -webkit-backdrop-filter: blur(12px) saturate(140%);
+    border-bottom: 1px solid var(--sigov-line) !important;
+    box-shadow: 0 1px 3px rgba(20, 26, 24, 0.06), 0 4px 12px rgba(20, 26, 24, 0.03) !important;
+  }
+
+  body:not(:has(.fondo-marca)):not(:has(.pagina-alarma)) .bg-fire {
+    color: var(--sigov-surface);
+  }
+
+  .btn-anotar {
+    border-color: var(--sigov-fire);
+    background-color: var(--sigov-surface);
+    color: var(--sigov-fire);
+  }
+
+  .btn-anotar:hover,
+  .btn-anotar:active {
+    background-color: var(--sigov-fire);
+    color: var(--sigov-surface);
+  }
+
+  body:has(.fondo-marca),
+  body:has(.pagina-alarma) {
+    --sigov-bg: #101317;
+    --sigov-bg-subtle: #171b20;
+    --sigov-surface: #20252b;
+    --sigov-surface-hover: #272d34;
+    --sigov-ink: #f5f5f5;
+    --sigov-ink-muted: #b9bec5;
+    --sigov-ink-faint: #8b929b;
+    --sigov-fire: #c62828;
+    --sigov-fire-dark: #a11f1f;
+    --sigov-fire-soft: #ff6b6b;
+    --sigov-fire-text: #ff6b6b;
+    --sigov-fire-light: rgba(198, 40, 40, 0.14);
+    --sigov-fire-border: rgba(198, 40, 40, 0.45);
+    --sigov-brass: #d9b56a;
+    --sigov-brass-soft: #ecd08a;
+    --sigov-brass-light: rgba(217, 181, 106, 0.12);
+    --sigov-brass-border: rgba(217, 181, 106, 0.35);
+    --sigov-alarm: #f0a94a;
+    --sigov-alarm-soft: #f7c17a;
+    --sigov-alarm-light: rgba(240, 169, 74, 0.12);
+    --sigov-alarm-border: rgba(240, 169, 74, 0.35);
+    --sigov-ok: #4ade80;
+    --sigov-line: #454b53;
+    --sigov-line-subtle: #2e343b;
+    --color-bg: var(--sigov-bg);
+    --color-bg-subtle: var(--sigov-bg-subtle);
+    --color-surface: var(--sigov-surface);
+    --color-surface-hover: var(--sigov-surface-hover);
+    --color-ink: var(--sigov-ink);
+    --color-ink-muted: var(--sigov-ink-muted);
+    --color-ink-faint: var(--sigov-ink-faint);
+    --color-fire: var(--sigov-fire);
+    --color-fire-dark: var(--sigov-fire-dark);
+    --color-fire-soft: var(--sigov-fire-soft);
+    --color-fire-text: var(--sigov-fire-text);
+    --color-fire-light: var(--sigov-fire-light);
+    --color-fire-border: var(--sigov-fire-border);
+    --color-brass: var(--sigov-brass);
+    --color-brass-soft: var(--sigov-brass-soft);
+    --color-brass-light: var(--sigov-brass-light);
+    --color-brass-border: var(--sigov-brass-border);
+    --color-alarm: var(--sigov-alarm);
+    --color-alarm-soft: var(--sigov-alarm-soft);
+    --color-alarm-light: var(--sigov-alarm-light);
+    --color-alarm-border: var(--sigov-alarm-border);
+    --color-ok: var(--sigov-ok);
+    --color-ok-light: rgba(74, 222, 128, 0.12);
+    --color-error-light: var(--sigov-fire-light);
+    --color-error-border: var(--sigov-fire-border);
+    --color-error-text: var(--sigov-fire-text);
+    --color-line: var(--sigov-line);
+    --color-line-subtle: var(--sigov-line-subtle);
+    color-scheme: dark;
+  }
+
+  html:has(.fondo-marca),
+  html:has(.pagina-alarma) {
+    color-scheme: dark;
+  }
+
+  body:has(.pagina-alarma) .glass-header {
+    background: #101317 !important;
+    border-bottom: 2px solid #c62828 !important;
+    box-shadow: inset 0 -1px 0 #454b53, 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .titulo-tarjeta {
+    font-family: var(--font-oswald), sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+    color: var(--sigov-ink);
+  }
+}
+
+@theme inline {
+  --color-ink-secondary: var(--sigov-ink-secondary);
+  --color-ink-strong: var(--sigov-ink-strong);
+  --color-alarm-text: var(--sigov-alarm-text);
+}
+
+@media screen {
+  :root {
+    --sigov-line: #dbe1dd;
+    --sigov-ink-secondary: #3d4a45;
+    --sigov-ink-strong: #0c100e;
+    --sigov-alarm-text: #8a4a05;
+    --color-line: var(--sigov-line);
+    --color-ink-secondary: var(--sigov-ink-secondary);
+    --color-ink-strong: var(--sigov-ink-strong);
+    --color-alarm-text: var(--sigov-alarm-text);
+  }
+
+  body:has(.fondo-marca),
+  body:has(.pagina-alarma) {
+    --sigov-ink-secondary: #c8ced3;
+    --sigov-ink-strong: #f5f5f5;
+    --sigov-alarm-text: #f0a94a;
+    --color-ink-secondary: var(--sigov-ink-secondary);
+    --color-ink-strong: var(--sigov-ink-strong);
+    --color-alarm-text: var(--sigov-alarm-text);
+  }
+
+  .texto-aux {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--sigov-ink-secondary);
+  }
+
+  .heading-display.compacta {
+    font-size: 18px !important;
+    line-height: 1.25;
+    color: var(--sigov-ink);
+  }
+
+  .btn-anotar {
+    touch-action: manipulation;
+  }
+}
+
+@theme inline {
+  --color-servicio-crema: var(--sigov-servicio-crema);
+  --color-servicio-hoy: var(--sigov-servicio-hoy);
+  --color-servicio-borde: var(--sigov-servicio-borde);
+  --color-servicio-ambar: var(--sigov-servicio-ambar);
+  --color-aviso-fondo: var(--sigov-aviso-fondo);
+  --color-aviso-borde: var(--sigov-aviso-borde);
+  --color-brass-texto: var(--sigov-brass-texto);
+  --color-celda-pasada: var(--sigov-celda-pasada);
+  --color-segmento-vacio: var(--sigov-segmento-vacio);
+}
+
+@media screen {
+  :root {
+    --sigov-servicio-crema: #fdf3e3;
+    --sigov-servicio-hoy: #fbf3e6;
+    --sigov-servicio-borde: #e9c89c;
+    --sigov-servicio-ambar: #c2690b;
+    --sigov-aviso-fondo: #fdf2f4;
+    --sigov-aviso-borde: #edb8c4;
+    --sigov-brass-texto: #7a5a1e;
+    --sigov-celda-pasada: #eef1ef;
+    --sigov-segmento-vacio: #d5dbd7;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--sigov-bg);
+  --color-bg-subtle: var(--sigov-bg-subtle);
+  --color-surface: var(--sigov-surface);
+  --color-surface-hover: var(--sigov-surface-hover);
+  --color-ink: var(--sigov-ink);
+  --color-ink-muted: var(--sigov-ink-muted);
+  --color-ink-faint: var(--sigov-ink-faint);
+  --color-fire: var(--sigov-fire);
+  --color-fire-dark: var(--sigov-fire-dark);
+  --color-fire-light: var(--sigov-fire-light);
+  --color-fire-border: var(--sigov-fire-border);
+  --color-brass: var(--sigov-brass);
+  --color-brass-light: var(--sigov-brass-light);
+  --color-brass-border: var(--sigov-brass-border);
+  --color-alarm: var(--sigov-alarm);
+  --color-alarm-light: var(--sigov-alarm-light);
+  --color-alarm-border: var(--sigov-alarm-border);
+  --color-ok: var(--sigov-ok);
+  --color-line: var(--sigov-line);
+  --color-line-subtle: var(--sigov-line-subtle);
+}
+
+@media screen {
+  :root {
+    --sigov-bg: #f2f5f3;
+    --sigov-bg-subtle: #e9ecea;
+    --sigov-surface: #ffffff;
+    --sigov-surface-hover: #fafbfa;
+    --sigov-ink: #141a18;
+    --sigov-ink-muted: #586660;
+    --sigov-ink-faint: #889690;
+    --sigov-fire: #c8102e;
+    --sigov-fire-dark: #a30d25;
+    --sigov-fire-light: #fdf2f4;
+    --sigov-fire-border: rgba(200, 16, 46, 0.20);
+    --sigov-brass: #96702e;
+    --sigov-brass-light: #fbf7ee;
+    --sigov-brass-border: rgba(150, 112, 46, 0.25);
+    --sigov-alarm: #c2690b;
+    --sigov-alarm-light: #fff7eb;
+    --sigov-alarm-border: rgba(194, 105, 11, 0.25);
+    --sigov-ok: #047857;
+    --sigov-line: #dbe1dd;
+    --sigov-line-subtle: #e8ede9;
+    --color-bg: var(--sigov-bg);
+    --color-bg-subtle: var(--sigov-bg-subtle);
+    --color-surface: var(--sigov-surface);
+    --color-surface-hover: var(--sigov-surface-hover);
+    --color-ink: var(--sigov-ink);
+    --color-ink-muted: var(--sigov-ink-muted);
+    --color-ink-faint: var(--sigov-ink-faint);
+    --color-fire: var(--sigov-fire);
+    --color-fire-dark: var(--sigov-fire-dark);
+    --color-fire-light: var(--sigov-fire-light);
+    --color-fire-border: var(--sigov-fire-border);
+    --color-brass: var(--sigov-brass);
+    --color-brass-light: var(--sigov-brass-light);
+    --color-brass-border: var(--sigov-brass-border);
+    --color-alarm: var(--sigov-alarm);
+    --color-alarm-light: var(--sigov-alarm-light);
+    --color-alarm-border: var(--sigov-alarm-border);
+    --color-ok: var(--sigov-ok);
+    --color-line: var(--sigov-line);
+    --color-line-subtle: var(--sigov-line-subtle);
+  }
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-line);
+  }
+}
+
+

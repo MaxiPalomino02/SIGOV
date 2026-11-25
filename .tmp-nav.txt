@@ -1,0 +1,45 @@
+﻿      <nav
+        aria-label="Navegaci�n principal"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        <div className="mx-auto flex h-[68px] max-w-lg items-stretch justify-around px-1">
+          {PRINCIPALES.map((item) => {
+            const activo = esActivo(pathname, item.href);
+            const Icono = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={activo ? "page" : undefined}
+                className={`${ITEM_MOVIL_BASE} ${activo ? "text-ink" : "text-ink-muted hover:text-ink"}`}
+              >
+                <span className="relative">
+                  <Icono className={`h-5 w-5 ${activo ? "text-fire" : ""}`} aria-hidden />
+                  {item.badge !== undefined ? (
+                    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-fire px-1 font-mono text-[9px] font-semibold text-white">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </span>
+                <span>{item.label}</span>
+                {activo ? <span className="mt-0.5 h-0.5 w-6 rounded-full bg-fire" /> : null}
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={masAbierto}
+            onClick={() => setMasAbierto(true)}
+            className={`${ITEM_MOVIL_BASE} cursor-pointer ${masActivo ? "text-ink" : "text-ink-muted hover:text-ink"}`}
+          >
+            <Menu className={`h-5 w-5 ${masActivo ? "text-fire" : ""}`} aria-hidden />
+            <span>M�s</span>
+            {masActivo ? <span className="mt-0.5 h-0.5 w-6 rounded-full bg-fire" /> : null}
+          </button>
+        </div>
+      </nav>
+
+      <Hoja open={masAbierto} onClose={() => setMasAbierto(false)} title="M�s secciones">

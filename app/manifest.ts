@@ -1,0 +1,42 @@
+import type { MetadataRoute } from "next";
+import { PRODUCTO } from "@/lib/marca";
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    id: "/inicio",
+    name: PRODUCTO.nombre,
+    short_name: PRODUCTO.nombre,
+    description: PRODUCTO.nombreCompleto,
+    start_url: "/inicio",
+    display: "standalone",
+    orientation: "portrait",
+    background_color: "#101317",
+    theme_color: "#101317",
+    icons: [
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/icon-maskable-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
+    ],
+  };
+}
