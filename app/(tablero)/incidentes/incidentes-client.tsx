@@ -8,6 +8,7 @@ import {
   Bug,
   Car,
   Check,
+  ChevronRight,
   ClipboardList,
   Clock3,
   FileDown,
@@ -30,13 +31,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SectionHeading } from "@/components/ui/section-heading";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { StatusPill } from "@/components/ui/status-pill";
-import { Aviso } from "@/components/ui/aviso";
-import { Tabs } from "@/components/ui/tabs";
-import { EstadoVacio } from "@/components/ui/estado-vacio";
-import { Pasos } from "@/components/ui/pasos";
 import {
   ETIQUETAS_TIPO_INCIDENTE,
   TIPOS_INCIDENTE,
@@ -149,6 +143,29 @@ type VentanaConVoz = Window & {
   webkitSpeechRecognition?: new () => ReconocimientoVoz;
 };
 
+
+
+function etiquetaEstadoIncidente(estado: Incidente["estado"]) {
+  return estado === "cargado" ? "Cargado" : "Borrador";
+}
+function claseChipEstado(estado: Incidente["estado"]) {
+  return estado === "cargado" ? "bg-green-tint text-green-ink" : "bg-yellow-tint text-yellow-ink";
+}
+function claveMes(fechaISO: string) {
+  const d = new Date(fechaISO);
+  if (Number.isNaN(d.getTime())) return "sin-fecha";
+  const partes = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Argentina/Tucuman", year: "numeric", month: "2-digit" }).formatToParts(d);
+  const anio = partes.find((p) => p.type === "year")?.value ?? "0000";
+  const mes = partes.find((p) => p.type === "month")?.value ?? "00";
+  return `${anio}-${mes}`;
+}
+function etiquetaMes(clave: string) {
+  if (clave === "sin-fecha") return "Sin fecha";
+  const [anio, mes] = clave.split("-");
+  const d = new Date(Date.UTC(Number(anio), Number(mes) - 1, 1, 12, 0, 0));
+  const nombre = new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric", timeZone: "UTC" }).format(d);
+  return nombre.charAt(0).toUpperCase() + nombre.slice(1);
+}
 function construirPlanillaHTML(incidente: Incidente, cuartel: CuartelInfo): string {
   const personal = incidente.personal.length
     ? incidente.personal
@@ -646,647 +663,339 @@ export function IncidentesClient({
     estadoGuardado === "guardando"
       ? "Guardando borrador..."
       : estadoGuardado === "servidor"
-        ? "Borrador guardado en el servidor."
+        ? "Borrador guardado"
         : estadoGuardado === "local" && ultimoGuardadoLocal
-          ? `Borrador guardado en este dispositivo a las ${ultimoGuardadoLocal}.`
-          : null;
+          ? `Borrador guardado a las ${ultimoGuardadoLocal}`
+          : estadoGuardado === "error"
+            ? "No se pudo guardar el borrador"
+            : null;
+
+  const gruposMes = useMemo(() => {
+    const mapa = new Map<string, Incidente[]>();
+    for (const incidente of visibles) {
+      const clave = claveMes(incidente.fecha_hora);
+      const actual = mapa.get(clave) ?? [];
+      actual.push(incidente);
+      mapa.set(clave, actual);
+    }
+    return Array.from(mapa.entries()).map(([clave, items]) => ({ clave, titulo: etiquetaMes(clave), items }));
+  }, [visibles]);
+
+  const progreso = (paso / 4) * 100;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:py-8">
-      <SectionHeading
-        titulo="Incidentes"
-        descripcion="Registrá las intervenciones del cuartel. La planilla se puede imprimir para completar RUBA."
-        accion={
-          vista === "lista" ? (
-            <Button onClick={nuevoIncidente} className="gap-2">
-              <Plus className="h-4 w-4" aria-hidden />
-              Nuevo incidente
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={volverLista} className="gap-2">
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Volver a la lista
-            </Button>
-          )
-        }
-      />
-
-      {mensaje ? (
-        <div className="mt-4">
-          <Aviso variante={mensaje.tipo}>{mensaje.texto}</Aviso>
-        </div>
-      ) : null}
-
-      {cargaError ? (
-        <div className="mt-4">
-          <Aviso variante="error">{cargaError}</Aviso>
-        </div>
-      ) : null}
-
-      {vista === "lista" ? (
-        <div className="mt-5 space-y-4">
-          {borradorPendiente ? (
-            <Aviso variante="alerta" titulo="Hay un borrador sin terminar">
-              <p className="text-[15px]">
-                Encontramos un borrador guardado en este dispositivo. ¿Querés continuarlo?
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" onClick={restaurarBorrador}>
-                  Continuar borrador
-                </Button>
-                <Button size="sm" variant="secondary" onClick={descartarBorrador}>
-                  Descartar copia local
-                </Button>
-              </div>
-            </Aviso>
-          ) : null}
-
-          <Tabs
-            items={[
-              { value: "cargados", label: "Cargados", badge: cargados.length },
-              { value: "borradores", label: "Borradores", badge: borradores.length },
-            ]}
-            value={filtro}
-            onChange={(v) => setFiltro(v as "cargados" | "borradores")}
-            ariaLabel="Estado de incidentes"
-          />
-
-          <DashboardCard
-            titulo={filtro === "cargados" ? "Incidentes cargados" : "Borradores"}
-            descripcion={
-              filtro === "cargados"
-                ? esOficial
-                  ? "Todos los incidentes registrados."
-                  : "Tus incidentes registrados."
-                : "Borradores que todavía no se guardaron como incidente."
-            }
-            loading={cargandoLista}
-          >
-            {visibles.length === 0 ? (
-              <EstadoVacio
-                icono={filtro === "cargados" ? "ClipboardList" : "FileText"}
-                titulo={
-                  filtro === "cargados" ? "Todavía no hay incidentes" : "No hay borradores"
-                }
-                texto={
-                  filtro === "cargados"
-                    ? "Cuando registres un incidente, va a aparecer en esta lista."
-                    : "Los borradores se guardan solos mientras completás el registro."
-                }
-                accion={
-                  filtro === "cargados"
-                    ? { label: "Registrar incidente", onClick: nuevoIncidente }
-                    : undefined
-                }
-              />
-            ) : (
-              <ul className="space-y-3">
-                {visibles.map((incidente) => {
-                  const Icono = ICONOS_TIPO[incidente.tipo];
-                  return (
-                    <li key={incidente.id}>
-                      <button
-                        type="button"
-                        onClick={() => abrirFicha(incidente)}
-                        className="flex w-full min-h-12 items-start gap-3 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:border-ink-muted/40 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft"
-                      >
-                        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fire/10 text-fire-soft ring-1 ring-fire/25">
-                          <Icono className="h-5 w-5" aria-hidden />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-ink">
-                              {ETIQUETAS_TIPO_INCIDENTE[incidente.tipo]}
-                            </span>
-                            <StatusPill estado={estadoPill(incidente.estado)} />
-                          </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-ink-muted">
-                            <span className="inline-flex items-center gap-1">
-                              <Clock3 className="h-3.5 w-3.5" aria-hidden />
-                              {formatearFechaHoraIncidente(incidente.fecha_hora)}
-                            </span>
-                            {incidente.direccion ? (
-                              <span className="inline-flex items-center gap-1">
-                                <MapPin className="h-3.5 w-3.5" aria-hidden />
-                                {incidente.direccion}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-3 text-[15px] text-ink-secondary">
-                            <span className="inline-flex items-center gap-1">
-                              <Users className="h-3.5 w-3.5" aria-hidden />
-                              {incidente.personal.length} personal
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <ClipboardList className="h-3.5 w-3.5" aria-hidden />
-                              {incidente.unidades.length} unidades
-                            </span>
-                            {esOficial && incidente.creador_nombre ? (
-                              <span className="inline-flex items-center gap-1">
-                                <User className="h-3.5 w-3.5" aria-hidden />
-                                {incidente.creador_nombre}
-                              </span>
-                            ) : null}
-                          </span>
-                        </span>
-                        <ArrowRight className="mt-2 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </DashboardCard>
-        </div>
-      ) : null}
-
-      {vista === "ficha" && seleccionado ? (
-        <FichaIncidente
-          incidente={seleccionado}
-          esOficial={esOficial}
-          esCreador={seleccionado.creado_por === sessionId}
-          onVolver={volverLista}
-          onImprimir={() => imprimir(seleccionado)}
-          onContinuar={() => continuarBorrador(seleccionado)}
-        />
-      ) : null}
-
+    <div className="min-h-dvh bg-bg pb-28">
       {vista === "nuevo" ? (
-        <div className="mt-5 space-y-4">
-          <Pasos
-            pasos={PASOS_INCIDENTE}
-            paso={paso}
-            onIr={(p) => (p < paso ? setPaso(p) : undefined)}
-          />
-
-          {etiquetaGuardado ? (
-            <p className="flex items-center gap-2 text-[14px] text-ink-muted" aria-live="polite">
-              {estadoGuardado === "guardando" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Check className="h-3.5 w-3.5 text-ok" aria-hidden />
-              )}
-              {etiquetaGuardado}
-            </p>
-          ) : null}
-
-          {paso === 1 ? (
-            <DashboardCard
-              titulo="1. Tipo de incidente"
-              descripcion="Elegí la opción que mejor describa la intervención."
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {TIPOS_INCIDENTE.map((tipo) => {
-                  const Icono = ICONOS_TIPO[tipo.value];
-                  const activo = borrador.tipo === tipo.value;
-                  return (
-                    <button
-                      key={tipo.value}
-                      type="button"
-                      onClick={() => cambiarTipo(tipo.value)}
-                      aria-pressed={activo}
-                      className={`flex min-h-16 items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft ${
-                        activo
-                          ? "border-fire bg-fire/15 text-ink"
-                          : "border-line bg-surface text-ink hover:border-ink-muted/40 hover:bg-surface-hover"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${
-                          activo ? "bg-fire text-ink" : "bg-bg-subtle text-ink-muted"
-                        }`}
-                      >
-                        <Icono className="h-5 w-5" aria-hidden />
-                      </span>
-                      <span className="text-[16px] font-semibold">{tipo.label}</span>
-                      {activo ? <Check className="ml-auto h-5 w-5 text-fire-soft" aria-hidden /> : null}
-                    </button>
-                  );
-                })}
+        <div className="glass sticky top-0 z-30 border-b border-separator">
+          <div className="mx-auto w-full max-w-3xl px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={volverLista} aria-label="Volver a la lista" className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2">
+                <ArrowLeft size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Nuevo incidente</p>
+                <p className="truncate text-[17px] font-semibold text-label">Paso {paso} de 4: {PASOS_INCIDENTE[paso - 1]?.label}</p>
               </div>
-            </DashboardCard>
-          ) : null}
-
-          {paso === 2 ? (
-            <DashboardCard
-              titulo="2. Dónde y cuándo"
-              descripcion="La hora actual ya está cargada. Ajustala si hace falta."
-            >
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Fecha y hora"
-                  type="datetime-local"
-                  value={borrador.fecha_hora}
-                  onChange={(e) => setBorrador((prev) => ({ ...prev, fecha_hora: e.target.value }))}
-                />
-                <div className="flex items-end">
-                  <Button variant="secondary" onClick={usarHoraActual} className="gap-2">
-                    <Clock3 className="h-4 w-4" aria-hidden />
-                    Usar hora actual
-                  </Button>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Input
-                  label="Dirección"
-                  placeholder="Calle, número y localidad"
-                  value={borrador.direccion}
-                  maxLength={200}
-                  onChange={(e) => setBorrador((prev) => ({ ...prev, direccion: e.target.value }))}
-                  hint="Obligatoria para guardar el incidente."
-                />
-              </div>
-            </DashboardCard>
-          ) : null}
-
-          {paso === 3 ? (
-            <div className="space-y-4">
-              <DashboardCard
-                titulo="3. Personal de guardia"
-                descripcion="Marcá quiénes participaron. Podés actualizar la guardia si cambió."
-                encabezadoAccion={
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={refrescarPersonal}
-                    disabled={cargandoPersonal}
-                    className="gap-2"
-                  >
-                    {cargandoPersonal ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    ) : (
-                      <Users className="h-4 w-4" aria-hidden />
-                    )}
-                    Actualizar
-                  </Button>
-                }
-              >
-                {personalErrorActual ? (
-                  <Aviso variante="error">{personalErrorActual}</Aviso>
-                ) : personalGuardia.length === 0 ? (
-                  <EstadoVacio
-                    icono="Users"
-                    titulo="No hay personal de guardia ahora"
-                    texto="Podés guardar el incidente igual y completar el personal en RUBA."
-                  />
-                ) : (
-                  <ul className="space-y-2">
-                    {personalGuardia.map((persona) => {
-                      const activo = borrador.personal.some(
-                        (p) => p.bombero_id === persona.bombero_id
-                      );
-                      return (
-                        <li key={persona.bombero_id}>
-                          <button
-                            type="button"
-                            onClick={() => togglePersonal(persona)}
-                            aria-pressed={activo}
-                            className={`flex w-full min-h-12 items-center gap-3 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft ${
-                              activo
-                                ? "border-brass bg-brass/10"
-                                : "border-line bg-surface hover:bg-surface-hover"
-                            }`}
-                          >
-                            <span
-                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border ${
-                                activo
-                                  ? "border-brass bg-brass text-bg"
-                                  : "border-line bg-bg-subtle text-transparent"
-                              }`}
-                            >
-                              <Check className="h-4 w-4" aria-hidden />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block font-semibold text-ink">{persona.nombre}</span>
-                              {persona.cargo ? (
-                                <span className="text-[14px] text-ink-muted">{persona.cargo}</span>
-                              ) : null}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </DashboardCard>
-
-              <DashboardCard
-                titulo="Unidades"
-                descripcion="Agregá los móviles o unidades que intervinieron."
-              >
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Input
-                    label="Unidad"
-                    placeholder="Ej: Móvil 1"
-                    value={unidadInput}
-                    maxLength={40}
-                    onChange={(e) => setUnidadInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        agregarUnidad();
-                      }
-                    }}
-                    containerClassName="flex-1"
-                  />
-                  <div className="flex items-end">
-                    <Button variant="secondary" onClick={agregarUnidad} className="gap-2">
-                      <Plus className="h-4 w-4" aria-hidden />
-                      Agregar
-                    </Button>
-                  </div>
-                </div>
-                {borrador.unidades.length > 0 ? (
-                  <ul className="mt-3 flex flex-wrap gap-2">
-                    {borrador.unidades.map((unidad) => (
-                      <li key={unidad}>
-                        <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-bg-subtle pl-3 text-[14px] text-ink">
-                          {unidad}
-                          <button
-                            type="button"
-                            onClick={() => quitarUnidad(unidad)}
-                            aria-label={`Quitar ${unidad}`}
-                            className="flex h-11 w-11 items-center justify-center rounded-full text-ink-muted hover:bg-surface-hover hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft"
-                          >
-                            <X className="h-3.5 w-3.5" aria-hidden />
-                          </button>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-[14px] text-ink-muted">Todavía no agregaste unidades.</p>
-                )}
-              </DashboardCard>
-            </div>
-          ) : null}
-
-          {paso === 4 ? (
-            <DashboardCard
-              titulo="4. Detalle y confirmación"
-              descripcion="Escribí un resumen breve de lo que pasó. Después revisá y guardá."
-            >
-              <Textarea
-                label="Detalle de la intervención"
-                placeholder="Qué pasó, cómo se trabajó y observaciones importantes."
-                rows={5}
-                maxLength={2000}
-                value={borrador.descripcion}
-                onChange={(e) =>
-                  setBorrador((prev) => ({ ...prev, descripcion: e.target.value }))
-                }
-                hint={`${borrador.descripcion.length}/2000 caracteres`}
-              />
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {soportaVoz ? (
-                  <Button variant="secondary" onClick={dictar} className="gap-2">
-                    {escuchando ? (
-                      <MicOff className="h-4 w-4" aria-hidden />
-                    ) : (
-                      <Mic className="h-4 w-4" aria-hidden />
-                    )}
-                    {escuchando ? "Detener dictado" : "Dictar por voz"}
-                  </Button>
-                ) : (
-                  <p className="text-[14px] text-ink-muted">
-                    Tu navegador no soporta dictado por voz. Escribí el detalle.
-                  </p>
-                )}
-                {escuchando ? (
-                  <span className="text-[14px] text-alarm" aria-live="polite">
-                    Escuchando...
-                  </span>
-                ) : null}
-              </div>
-              {errorVoz ? (
-                <p className="mt-2 flex items-center gap-2 text-[14px] text-fire-text" role="alert">
-                  <AlertCircle className="h-4 w-4" aria-hidden />
-                  {errorVoz}
+              {etiquetaGuardado ? (
+                <p className="hidden shrink-0 items-center gap-1.5 text-[13px] text-label-2 sm:flex" aria-live="polite">
+                  {estadoGuardado === "guardando" ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Check size={14} strokeWidth={1.75} aria-hidden />}
+                  {etiquetaGuardado}
                 </p>
               ) : null}
-
-              <div className="mt-5 rounded-xl border border-line bg-bg-subtle p-4">
-                <h4 className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-                  Resumen
-                </h4>
-                <dl className="mt-2 grid gap-2 text-[15px] sm:grid-cols-2">
-                  <div>
-                    <dt className="text-ink-muted">Tipo</dt>
-                    <dd className="font-semibold text-ink">
-                      {borrador.tipo ? ETIQUETAS_TIPO_INCIDENTE[borrador.tipo] : "Sin elegir"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-ink-muted">Fecha y hora</dt>
-                    <dd className="font-semibold text-ink">
-                      {formatearBorradorFecha(borrador.fecha_hora)}
-                    </dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt className="text-ink-muted">Dirección</dt>
-                    <dd className="font-semibold text-ink">
-                      {borrador.direccion.trim() || "Sin completar"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-ink-muted">Personal</dt>
-                    <dd className="font-semibold text-ink">
-                      {borrador.personal.length
-                        ? `${borrador.personal.length} seleccionados`
-                        : "Sin seleccionar"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-ink-muted">Unidades</dt>
-                    <dd className="font-semibold text-ink">
-                      {borrador.unidades.length ? borrador.unidades.join(", ") : "Sin unidades"}
-                    </dd>
-                  </div>
-                </dl>
-                {borrador.personal.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {borrador.personal.map((p) => (
-                      <span
-                        key={p.bombero_id}
-                        className="inline-flex items-center rounded-full border border-line bg-surface px-2.5 py-1 text-[14px] text-ink"
-                      >
-                        {p.nombre}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button variant="secondary" onClick={retroceder} className="gap-2">
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  Volver
-                </Button>
-                <Button onClick={guardar} disabled={guardando} className="gap-2">
-                  {guardando ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Check className="h-4 w-4" aria-hidden />
-                  )}
-                  {guardando ? "Guardando..." : "Guardar incidente"}
-                </Button>
-              </div>
-            </DashboardCard>
-          ) : null}
-
-          {paso < 4 ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-              <Button
-                variant="secondary"
-                onClick={retroceder}
-                disabled={paso === 1}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Atrás
-              </Button>
-              <Button onClick={avanzar} disabled={!puedeContinuar} className="gap-2">
-                Continuar
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Button>
             </div>
-          ) : null}
+            <div className="mt-3 h-1 overflow-hidden rounded-full bg-separator" aria-hidden>
+              <div className="h-full rounded-full bg-red transition-[width] duration-200" style={{ width: `${progreso}%` }} />
+            </div>
+            {etiquetaGuardado ? (
+              <p className="mt-2 flex items-center gap-1.5 text-[13px] text-label-2 sm:hidden" aria-live="polite">
+                {estadoGuardado === "guardando" ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Check size={14} strokeWidth={1.75} aria-hidden />}
+                {etiquetaGuardado}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="glass sticky top-0 z-30 border-b border-separator">
+          <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3">
+            {vista === "ficha" ? (
+              <button type="button" onClick={volverLista} aria-label="Volver a la lista" className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2">
+                <ArrowLeft size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-[22px] font-bold text-label">{vista === "ficha" ? "Incidente" : "Incidentes"}</h1>
+              {vista === "lista" ? <p className="text-[15px] text-label-2">Registrá y consultá las intervenciones del cuartel.</p> : null}
+            </div>
+            {vista === "lista" ? (
+              <Button onClick={nuevoIncidente} className="shrink-0 gap-2">
+                <Plus size={22} strokeWidth={1.75} aria-hidden />
+                <span className="hidden sm:inline">Nuevo incidente</span>
+                <span className="sm:hidden">Nuevo</span>
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-3xl px-4 py-5">
+        {mensaje ? (
+          <div role={mensaje.tipo === "error" ? "alert" : "status"} className={`mb-4 rounded-[16px] px-4 py-3 text-[15px] ${mensaje.tipo === "ok" ? "bg-green-tint text-green-ink" : mensaje.tipo === "error" ? "bg-red-tint text-red" : "bg-yellow-tint text-yellow-ink"}`}>
+            {mensaje.texto}
+          </div>
+        ) : null}
+        {cargaError ? <div role="alert" className="mb-4 rounded-[16px] bg-red-tint px-4 py-3 text-[15px] text-red">{cargaError}</div> : null}
+
+        {vista === "lista" ? (
+          <div className="space-y-4">
+            {borradorPendiente ? (
+              <div className="rounded-[16px] bg-yellow-tint p-4">
+                <p className="text-[17px] font-semibold text-label">Hay un borrador sin terminar</p>
+                <p className="mt-1 text-[15px] text-label-2">Encontramos un borrador guardado en este dispositivo. ¿Querés continuarlo?</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={restaurarBorrador}>Continuar borrador</Button>
+                  <Button size="sm" variant="secondary" onClick={descartarBorrador}>Descartar copia local</Button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex gap-2 rounded-[14px] bg-surface-2 p-1" role="tablist" aria-label="Estado de incidentes">
+              {([{ value: "cargados" as const, label: "Cargados", count: cargados.length }, { value: "borradores" as const, label: "Borradores", count: borradores.length }]).map((tab) => {
+                const activo = filtro === tab.value;
+                return (
+                  <button key={tab.value} type="button" role="tab" aria-selected={activo} onClick={() => setFiltro(tab.value)} className={`tap min-h-[44px] flex-1 rounded-[10px] px-3 text-[15px] font-semibold transition-colors ${activo ? "bg-surface text-label shadow-[0_1px_2px_rgba(0,0,0,.04)]" : "text-label-2"}`}>
+                    {tab.label} <span className="num text-label-3">{tab.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {cargandoLista ? (
+              <div className="rounded-[16px] bg-surface p-4 text-[15px] text-label-2">Cargando incidentes...</div>
+            ) : visibles.length === 0 ? (
+              <div className="rounded-[16px] bg-surface px-6 py-10 text-center">
+                <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] bg-surface-2 text-label-2"><ClipboardList size={22} strokeWidth={1.75} aria-hidden /></span>
+                <p className="text-[17px] font-semibold text-label">{filtro === "cargados" ? "Todavía no hay incidentes" : "No hay borradores"}</p>
+                <p className="mt-1 text-[15px] text-label-2">{filtro === "cargados" ? "Cuando registres un incidente, va a aparecer en esta lista." : "Los borradores se guardan solos mientras completás el registro."}</p>
+                {filtro === "cargados" ? <Button className="mt-5" onClick={nuevoIncidente}>Registrar incidente</Button> : null}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {gruposMes.map((grupo) => (
+                  <section key={grupo.clave}>
+                    <h2 className="mb-2 px-1 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">{grupo.titulo}</h2>
+                    <div className="overflow-hidden rounded-[16px] bg-surface">
+                      {grupo.items.map((incidente) => {
+                        const Icono = ICONOS_TIPO[incidente.tipo];
+                        return (
+                          <button key={incidente.id} type="button" onClick={() => abrirFicha(incidente)} className="tap fila flex w-full min-h-[44px] items-center gap-3 px-4 py-3 text-left hover:bg-surface-2">
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-red-tint text-red"><Icono size={22} strokeWidth={1.75} aria-hidden /></span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className="text-[17px] font-semibold text-label">{ETIQUETAS_TIPO_INCIDENTE[incidente.tipo]}</span>
+                                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[13px] font-medium ${claseChipEstado(incidente.estado)}`}>{etiquetaEstadoIncidente(incidente.estado)}</span>
+                              </span>
+                              <span className="mt-0.5 block truncate text-[15px] text-label-2"><span className="num">{formatearFechaHoraIncidente(incidente.fecha_hora)}</span>{incidente.direccion ? ` · ${incidente.direccion}` : ""}</span>
+                              <span className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] text-label-2"><span>{incidente.personal.length} personal</span><span>{incidente.unidades.length} unidades</span>{esOficial && incidente.creador_nombre ? <span>{incidente.creador_nombre}</span> : null}</span>
+                            </span>
+                            <ChevronRight size={22} strokeWidth={1.75} className="shrink-0 text-label-3" aria-hidden />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {vista === "ficha" && seleccionado ? (
+          <FichaIncidente incidente={seleccionado} esOficial={esOficial} esCreador={seleccionado.creado_por === sessionId} onVolver={volverLista} onImprimir={() => imprimir(seleccionado)} onContinuar={() => continuarBorrador(seleccionado)} />
+        ) : null}
+
+        {vista === "nuevo" ? (
+          <div className="space-y-4">
+            {paso === 1 ? (
+              <section className="rounded-[16px] bg-surface p-4">
+                <h2 className="text-[22px] font-bold text-label">¿Qué tipo de incidente fue?</h2>
+                <p className="mt-1 text-[15px] text-label-2">Elegí la opción que mejor describa la intervención.</p>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {TIPOS_INCIDENTE.map((tipo) => {
+                    const Icono = ICONOS_TIPO[tipo.value];
+                    const activo = borrador.tipo === tipo.value;
+                    return (
+                      <button key={tipo.value} type="button" onClick={() => cambiarTipo(tipo.value)} aria-pressed={activo} className={`tap flex min-h-[104px] flex-col items-center justify-center gap-2 rounded-[16px] border px-3 py-4 text-center transition-colors ${activo ? "border-red bg-red-tint text-label" : "border-separator bg-surface-2 text-label hover:bg-surface"}`}>
+                        <span className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${activo ? "bg-red text-surface" : "bg-surface text-label-2"}`}><Icono size={22} strokeWidth={1.75} aria-hidden /></span>
+                        <span className="text-[15px] font-semibold leading-snug">{tipo.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {paso === 2 ? (
+              <section className="rounded-[16px] bg-surface p-4">
+                <h2 className="text-[22px] font-bold text-label">¿Dónde y cuándo?</h2>
+                <p className="mt-1 text-[15px] text-label-2">La hora actual ya está cargada. Ajustala si hace falta.</p>
+                <div className="mt-4 space-y-4">
+                  <Input label="Fecha y hora" type="datetime-local" value={borrador.fecha_hora} onChange={(e) => setBorrador((prev) => ({ ...prev, fecha_hora: e.target.value }))} />
+                  <Button variant="secondary" onClick={usarHoraActual} className="gap-2"><Clock3 size={22} strokeWidth={1.75} aria-hidden />Usar hora actual</Button>
+                  <Input label="Dirección" placeholder="Calle, número y localidad" value={borrador.direccion} maxLength={200} onChange={(e) => setBorrador((prev) => ({ ...prev, direccion: e.target.value }))} hint="Obligatoria para guardar el incidente." />
+                </div>
+              </section>
+            ) : null}
+
+            {paso === 3 ? (
+              <div className="space-y-4">
+                <section className="rounded-[16px] bg-surface p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-[22px] font-bold text-label">¿Quiénes participaron?</h2>
+                      <p className="mt-1 text-[15px] text-label-2">Marcá el personal de guardia que intervino.</p>
+                    </div>
+                    <Button size="sm" variant="secondary" onClick={refrescarPersonal} disabled={cargandoPersonal} className="shrink-0 gap-2">
+                      {cargandoPersonal ? <Loader2 size={22} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Users size={22} strokeWidth={1.75} aria-hidden />}
+                      Actualizar
+                    </Button>
+                  </div>
+                  {personalErrorActual ? <p role="alert" className="mt-4 rounded-[14px] bg-red-tint px-4 py-3 text-[15px] text-red">{personalErrorActual}</p> : personalGuardia.length === 0 ? (
+                    <p className="mt-4 rounded-[14px] bg-surface-2 px-4 py-3 text-[15px] text-label-2">No hay personal de guardia ahora. Podés guardar el incidente igual y completar el personal en RUBA.</p>
+                  ) : (
+                    <div className="mt-4 overflow-hidden rounded-[16px] border border-separator">
+                      {personalGuardia.map((persona) => {
+                        const activo = borrador.personal.some((p) => p.bombero_id === persona.bombero_id);
+                        return (
+                          <button key={persona.bombero_id} type="button" onClick={() => togglePersonal(persona)} aria-pressed={activo} className="tap fila flex w-full min-h-[44px] items-center gap-3 px-4 py-3 text-left hover:bg-surface-2">
+                            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${activo ? "border-red bg-red text-surface" : "border-separator bg-surface text-transparent"}`}><Check size={14} strokeWidth={2} aria-hidden /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium text-label">{persona.nombre}</span>{persona.cargo ? <span className="block text-[15px] text-label-2">{persona.cargo}</span> : null}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+
+                <section className="rounded-[16px] bg-surface p-4">
+                  <h2 className="text-[22px] font-bold text-label">Unidades</h2>
+                  <p className="mt-1 text-[15px] text-label-2">Agregá los móviles o unidades que intervinieron.</p>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <Input label="Unidad" placeholder="Ej: Móvil 1" value={unidadInput} maxLength={40} onChange={(e) => setUnidadInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarUnidad(); } }} containerClassName="flex-1" />
+                    <div className="flex items-end"><Button variant="secondary" onClick={agregarUnidad} className="gap-2"><Plus size={22} strokeWidth={1.75} aria-hidden />Agregar</Button></div>
+                  </div>
+                  {borrador.unidades.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {borrador.unidades.map((unidad) => (
+                        <span key={unidad} className="inline-flex min-h-[44px] items-center gap-1 rounded-full bg-surface-2 pl-4 text-[15px] text-label">
+                          {unidad}
+                          <button type="button" onClick={() => quitarUnidad(unidad)} aria-label={`Quitar ${unidad}`} className="tap flex h-11 w-11 items-center justify-center rounded-full text-label-2 hover:bg-surface"><X size={18} strokeWidth={1.75} aria-hidden /></button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : <p className="mt-3 text-[15px] text-label-2">Todavía no agregaste unidades.</p>}
+                </section>
+              </div>
+            ) : null}
+
+            {paso === 4 ? (
+              <section className="rounded-[16px] bg-surface p-4">
+                <h2 className="text-[22px] font-bold text-label">Detalle y confirmación</h2>
+                <p className="mt-1 text-[15px] text-label-2">Escribí un resumen breve de lo que pasó. Después revisá y guardá.</p>
+                <div className="mt-4 space-y-3">
+                  <Textarea label="Detalle de la intervención" placeholder="Qué pasó, cómo se trabajó y observaciones importantes." rows={5} maxLength={2000} value={borrador.descripcion} onChange={(e) => setBorrador((prev) => ({ ...prev, descripcion: e.target.value }))} hint={`${borrador.descripcion.length}/2000 caracteres`} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {soportaVoz ? (
+                      <Button variant="secondary" onClick={dictar} className="gap-2">
+                        {escuchando ? <MicOff size={22} strokeWidth={1.75} aria-hidden /> : <Mic size={22} strokeWidth={1.75} aria-hidden />}
+                        {escuchando ? "Detener dictado" : "Dictar por voz"}
+                      </Button>
+                    ) : <p className="text-[15px] text-label-2">Tu navegador no soporta dictado por voz. Escribí el detalle.</p>}
+                    {escuchando ? <span className="text-[15px] font-medium text-red" aria-live="polite">Escuchando...</span> : null}
+                  </div>
+                  {errorVoz ? <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-red-tint px-4 py-3 text-[15px] text-red"><AlertCircle size={22} strokeWidth={1.75} aria-hidden />{errorVoz}</p> : null}
+                  <div className="rounded-[16px] bg-surface-2 p-4">
+                    <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Resumen</p>
+                    <dl className="mt-3 grid gap-3 text-[15px] sm:grid-cols-2">
+                      <div><dt className="text-label-2">Tipo</dt><dd className="font-semibold text-label">{borrador.tipo ? ETIQUETAS_TIPO_INCIDENTE[borrador.tipo] : "Sin elegir"}</dd></div>
+                      <div><dt className="text-label-2">Fecha y hora</dt><dd className="num font-semibold text-label">{formatearBorradorFecha(borrador.fecha_hora)}</dd></div>
+                      <div className="sm:col-span-2"><dt className="text-label-2">Dirección</dt><dd className="font-semibold text-label">{borrador.direccion.trim() || "Sin completar"}</dd></div>
+                      <div><dt className="text-label-2">Personal</dt><dd className="font-semibold text-label">{borrador.personal.length ? `${borrador.personal.length} seleccionados` : "Sin seleccionar"}</dd></div>
+                      <div><dt className="text-label-2">Unidades</dt><dd className="font-semibold text-label">{borrador.unidades.length ? borrador.unidades.join(", ") : "Sin unidades"}</dd></div>
+                    </dl>
+                    {borrador.personal.length > 0 ? <div className="mt-3 flex flex-wrap gap-2">{borrador.personal.map((p) => <span key={p.bombero_id} className="inline-flex items-center rounded-full bg-surface px-3 py-1 text-[13px] text-label">{p.nombre}</span>)}</div> : null}
+                  </div>
+                </div>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {vista === "nuevo" ? (
+        <div className="glass fixed inset-x-0 bottom-0 z-30 border-t border-separator">
+          <div className="mx-auto flex w-full max-w-3xl gap-3 px-4 py-3 pb-[calc(.75rem+env(safe-area-inset-bottom))]">
+            <Button variant="secondary" onClick={retroceder} disabled={paso === 1 || guardando} className="flex-1 gap-2"><ArrowLeft size={22} strokeWidth={1.75} aria-hidden />Atrás</Button>
+            {paso < 4 ? (
+              <Button onClick={avanzar} disabled={!puedeContinuar} className="flex-1 gap-2">Continuar<ArrowRight size={22} strokeWidth={1.75} aria-hidden /></Button>
+            ) : (
+              <Button onClick={guardar} disabled={guardando} className="flex-1 gap-2">
+                {guardando ? <Loader2 size={22} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Check size={22} strokeWidth={1.75} aria-hidden />}
+                {guardando ? "Guardando..." : "Guardar incidente"}
+              </Button>
+            )}
+          </div>
         </div>
       ) : null}
-
-      <p className="mt-8 border-t border-line-subtle pt-3 text-[15px] text-ink-secondary">
-        Registro a cargo de {sessionNombre}. Los incidentes son datos internos del cuartel.
-      </p>
     </div>
   );
 }
 
 function FichaIncidente({
-  incidente,
-  esOficial,
-  esCreador,
-  onVolver,
-  onImprimir,
-  onContinuar,
+  incidente, esOficial, esCreador, onVolver, onImprimir, onContinuar,
 }: {
-  incidente: Incidente;
-  esOficial: boolean;
-  esCreador: boolean;
-  onVolver: () => void;
-  onImprimir: () => void;
-  onContinuar: () => void;
+  incidente: Incidente; esOficial: boolean; esCreador: boolean; onVolver: () => void; onImprimir: () => void; onContinuar: () => void;
 }) {
   const Icono = ICONOS_TIPO[incidente.tipo];
   const editable = incidente.estado === "borrador" && esCreador;
-
   return (
-    <div className="mt-5 space-y-4">
-      <DashboardCard
-        titulo={ETIQUETAS_TIPO_INCIDENTE[incidente.tipo]}
-        descripcion={formatearFechaHoraIncidente(incidente.fecha_hora)}
-        encabezadoAccion={<StatusPill estado={estadoPill(incidente.estado)} />}
-      >
+    <div className="space-y-4">
+      <section className="rounded-[16px] bg-surface p-4">
         <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-fire/10 text-fire-soft ring-1 ring-fire/25">
-            <Icono className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div className="flex items-start gap-2">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
-              <div>
-                <p className="font-mono text-[11px] uppercase tracking-widest text-ink-muted">
-                  Dirección
-                </p>
-                <p className="text-[16px] text-ink">
-                  {incidente.direccion || "Sin dirección registrada"}
-                </p>
-              </div>
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-red-tint text-red"><Icono size={22} strokeWidth={1.75} aria-hidden /></span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-[22px] font-bold text-label">{ETIQUETAS_TIPO_INCIDENTE[incidente.tipo]}</h2>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[13px] font-medium ${claseChipEstado(incidente.estado)}`}>{etiquetaEstadoIncidente(incidente.estado)}</span>
             </div>
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-ink-muted">
-                Unidades
-              </p>
-              {incidente.unidades.length ? (
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {incidente.unidades.map((u) => (
-                    <span
-                      key={u}
-                      className="inline-flex items-center rounded-full border border-line bg-bg-subtle px-2.5 py-1 text-[14px] text-ink"
-                    >
-                      {u}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[15px] text-ink-muted">Sin unidades registradas.</p>
-              )}
-            </div>
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-widest text-ink-muted">
-                Detalle
-              </p>
-              <p className="mt-1 whitespace-pre-wrap text-[16px] leading-relaxed text-ink">
-                {incidente.descripcion || "Sin detalle registrado."}
-              </p>
-            </div>
+            <p className="num mt-1 text-[15px] text-label-2">{formatearFechaHoraIncidente(incidente.fecha_hora)}</p>
           </div>
         </div>
-      </DashboardCard>
-
-      <DashboardCard
-        titulo="Personal interviniente"
-        descripcion={
-          incidente.personal.length
-            ? `${incidente.personal.length} personas registradas.`
-            : "Sin personal registrado."
-        }
-      >
+        <dl className="mt-4 space-y-4 text-[15px]">
+          <div><dt className="text-label-2">Dirección</dt><dd className="text-[17px] font-medium text-label">{incidente.direccion || "Sin dirección registrada"}</dd></div>
+          <div><dt className="text-label-2">Unidades</dt><dd className="mt-1">{incidente.unidades.length ? <div className="flex flex-wrap gap-2">{incidente.unidades.map((u) => <span key={u} className="inline-flex items-center rounded-full bg-surface-2 px-3 py-1 text-[13px] text-label">{u}</span>)}</div> : <span className="text-label-2">Sin unidades registradas.</span>}</dd></div>
+          <div><dt className="text-label-2">Detalle</dt><dd className="mt-1 whitespace-pre-wrap text-[17px] leading-relaxed text-label">{incidente.descripcion || "Sin detalle registrado."}</dd></div>
+        </dl>
+      </section>
+      <section className="rounded-[16px] bg-surface p-4">
+        <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Personal interviniente</p>
+        <p className="mt-1 text-[15px] text-label-2">{incidente.personal.length ? `${incidente.personal.length} personas registradas.` : "Sin personal registrado."}</p>
         {incidente.personal.length ? (
-          <ul className="divide-y divide-line-subtle">
+          <div className="mt-3 overflow-hidden rounded-[16px] border border-separator">
             {incidente.personal.map((p) => (
-              <li key={p.bombero_id} className="flex items-center gap-3 py-2.5">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-subtle text-ink-muted">
-                  <User className="h-4 w-4" aria-hidden />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-semibold text-ink">{p.nombre}</span>
-                  {p.cargo ? (
-                    <span className="text-[14px] text-ink-muted">{p.cargo}</span>
-                  ) : null}
-                </span>
-              </li>
+              <div key={p.bombero_id} className="fila flex min-h-[44px] items-center gap-3 px-4 py-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-2 text-label-2"><User size={18} strokeWidth={1.75} aria-hidden /></span>
+                <span className="min-w-0 flex-1"><span className="block text-[17px] font-medium text-label">{p.nombre}</span>{p.cargo ? <span className="block text-[15px] text-label-2">{p.cargo}</span> : null}</span>
+              </div>
             ))}
-          </ul>
-        ) : (
-          <p className="text-[15px] text-ink-muted">
-            El personal se puede completar después en RUBA.
-          </p>
-        )}
-      </DashboardCard>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onClick={onVolver} className="gap-2">
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Volver
-        </Button>
-        <Button onClick={onImprimir} className="gap-2">
-          <FileDown className="h-4 w-4" aria-hidden />
-          Imprimir / PDF
-        </Button>
-        {editable ? (
-          <Button variant="secondary" onClick={onContinuar} className="gap-2">
-            <Pencil className="h-4 w-4" aria-hidden />
-            Continuar borrador
-          </Button>
-        ) : null}
-        {esOficial && incidente.creador_nombre ? (
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[14px] text-ink-muted">
-            <User className="h-3.5 w-3.5" aria-hidden />
-            Registrado por {incidente.creador_nombre}
-          </span>
-        ) : null}
+          </div>
+        ) : <p className="mt-3 text-[15px] text-label-2">El personal se puede completar después en RUBA.</p>}
+      </section>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="secondary" onClick={onVolver} className="gap-2"><ArrowLeft size={22} strokeWidth={1.75} aria-hidden />Volver</Button>
+        <Button onClick={onImprimir} className="gap-2"><FileDown size={22} strokeWidth={1.75} aria-hidden />Exportar PDF</Button>
+        {editable ? <Button variant="secondary" onClick={onContinuar} className="gap-2"><Pencil size={22} strokeWidth={1.75} aria-hidden />Continuar borrador</Button> : null}
       </div>
+      {esOficial && incidente.creador_nombre ? <p className="px-1 text-[15px] text-label-2">Registrado por {incidente.creador_nombre}</p> : null}
     </div>
   );
 }
