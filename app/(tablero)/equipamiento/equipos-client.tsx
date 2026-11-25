@@ -1,19 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Eye, Pencil, Plus, RefreshCw, Search, Wrench } from "lucide-react";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { SectionHeading } from "@/components/ui/section-heading";
-import { QuickAction } from "@/components/ui/quick-action";
-import { StatusPill, type EstadoStatusPill } from "@/components/ui/status-pill";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChevronRight,
+  Package,
+  Pencil,
+  Plus,
+  Radio,
+  Shield,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { Buscador } from "@/components/ui/buscador";
+import { Grupo } from "@/components/ui/grupo";
+import { Hoja } from "@/components/ui/hoja";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { Aviso } from "@/components/ui/aviso";
-import { Hoja } from "@/components/ui/hoja";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Segmentado } from "@/components/ui/segmentado";
+import { FotoInput } from "@/components/ui/foto-input";
 import {
   type Equipo,
   type EquipoMovimiento,
@@ -30,11 +37,11 @@ import {
   cambiarEstadoEquipo,
 } from "./actions";
 
-function estadoPill(estado: EstadoEquipo): EstadoStatusPill {
-  if (estado === "operativo") return "operativo";
-  if (estado === "en_reparacion") return "pendiente";
-  return "fuera-de-servicio";
-}
+const ESTADO_CHIPS: Array<{ valor: EstadoEquipo; etiqueta: string }> = [
+  { valor: "operativo", etiqueta: "Operativo" },
+  { valor: "en_reparacion", etiqueta: "En reparación" },
+  { valor: "baja", etiqueta: "Baja" },
+];
 
 function formatearFecha(fecha: string): string {
   const d = new Date(fecha);
@@ -49,6 +56,33 @@ function formatearFecha(fecha: string): string {
   }).format(d);
 }
 
+function iconoCategoria(categoria: string): LucideIcon {
+  const c = categoria.toLowerCase();
+  if (c.includes("radio") || c.includes("comunic")) return Radio;
+  if (c.includes("epp") || c.includes("protecc") || c.includes("seguridad")) return Shield;
+  if (c.includes("herram") || c.includes("repar")) return Wrench;
+  return Package;
+}
+
+function ChipEstado({ estado }: { estado: EstadoEquipo }) {
+  const clases =
+    estado === "operativo"
+      ? "bg-green-tint text-green-ink"
+      : estado === "en_reparacion"
+        ? "bg-yellow-tint text-yellow-ink"
+        : "bg-surface-2 text-label-2";
+  return (
+    <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[13px] font-medium ${clases}`}>
+      {ETIQUETAS_ESTADO_EQUIPO[estado]}
+    </span>
+  );
+}
+
+function esDesdeChequeo(m: EquipoMovimiento) {
+  const texto = `${m.accion} ${m.nota}`.toLowerCase();
+  return texto.includes("chequeo");
+}
+
 type Props = { oficial: boolean };
 
 export function EquiposClient({ oficial }: Props) {
@@ -58,7 +92,7 @@ export function EquiposClient({ oficial }: Props) {
 
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
-  const [filtroEstado, setFiltroEstado] = useState<EstadoEquipo | "todos">("todos");
+  const [filtroEstado, setFiltroEstado] = useState<"todos" | EstadoEquipo>("todos");
 
   const [hojaForm, setHojaForm] = useState<"crear" | "editar" | null>(null);
   const [equipoEditando, setEquipoEditando] = useState<Equipo | null>(null);
@@ -70,6 +104,7 @@ export function EquiposClient({ oficial }: Props) {
     estado: "operativo" as EstadoEquipo,
     notas: "",
   });
+  const [foto, setFoto] = useState<File | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState<string | null>(null);
 
@@ -108,18 +143,14 @@ export function EquiposClient({ oficial }: Props) {
       if (filtroCategoria !== "todas" && e.categoria !== filtroCategoria) return false;
       if (filtroEstado !== "todos" && e.estado !== filtroEstado) return false;
       if (!q) return true;
-      return (
-        e.codigo.toLowerCase().includes(q) ||
-        e.nombre.toLowerCase().includes(q) ||
-        e.categoria.toLowerCase().includes(q) ||
-        e.ubicacion.toLowerCase().includes(q)
-      );
+      return e.codigo.toLowerCase().includes(q) || e.nombre.toLowerCase().includes(q);
     });
   }, [equipos, busqueda, filtroCategoria, filtroEstado]);
 
   const abrirCrear = () => {
     setEquipoEditando(null);
     setForm({ codigo: "", nombre: "", categoria: "", ubicacion: "", estado: "operativo", notas: "" });
+    setFoto(null);
     setErrorForm(null);
     setHojaForm("crear");
   };
@@ -134,6 +165,7 @@ export function EquiposClient({ oficial }: Props) {
       estado: e.estado,
       notas: e.notas,
     });
+    setFoto(null);
     setErrorForm(null);
     setHojaForm("editar");
   };
@@ -141,12 +173,13 @@ export function EquiposClient({ oficial }: Props) {
   const guardarForm = async () => {
     setGuardando(true);
     setErrorForm(null);
-    let res;
-    if (hojaForm === "crear") {
-      res = await crearEquipo(form);
-    } else if (equipoEditando) {
-      res = await editarEquipo({ equipoId: equipoEditando.id, ...form });
-    } else {
+    const res =
+      hojaForm === "crear"
+        ? await crearEquipo(form)
+        : equipoEditando
+          ? await editarEquipo({ equipoId: equipoEditando.id, ...form })
+          : null;
+    if (!res) {
       setGuardando(false);
       return;
     }
@@ -156,6 +189,12 @@ export function EquiposClient({ oficial }: Props) {
       setEquipoEditando(null);
       await cargar();
       if (ficha && equipoEditando && ficha.id === equipoEditando.id) {
+        const resEquipos = await obtenerEquipos();
+        if (resEquipos.ok) {
+          setEquipos(resEquipos.data);
+          const actualizado = resEquipos.data.find((x) => x.id === equipoEditando.id) ?? null;
+          if (actualizado) setFicha(actualizado);
+        }
         const mov = await obtenerMovimientosEquipo(equipoEditando.id);
         if (mov.ok) setMovimientos(mov.data);
       }
@@ -180,9 +219,9 @@ export function EquiposClient({ oficial }: Props) {
     setErrorMov(null);
   };
 
-  const abrirCambioEstado = (e: Equipo) => {
-    setFicha(e);
-    setNuevoEstado(e.estado === "operativo" ? "en_reparacion" : "operativo");
+  const abrirCambioEstado = () => {
+    if (!ficha) return;
+    setNuevoEstado(ficha.estado === "operativo" ? "en_reparacion" : "operativo");
     setNotaEstado("");
     setErrorEstado(null);
     setHojaEstado(true);
@@ -196,9 +235,9 @@ export function EquiposClient({ oficial }: Props) {
     if (!res.ok) setErrorEstado(res.error);
     else {
       setHojaEstado(false);
-      await cargar();
       const resEquipos = await obtenerEquipos();
-      const actualizado = resEquipos.ok ? (resEquipos.data.find((x) => x.id === ficha.id) ?? null) : null;
+      if (resEquipos.ok) setEquipos(resEquipos.data);
+      const actualizado = resEquipos.ok ? resEquipos.data.find((x) => x.id === ficha.id) ?? null : null;
       if (actualizado) setFicha(actualizado);
       const mov = await obtenerMovimientosEquipo(ficha.id);
       if (mov.ok) setMovimientos(mov.data);
@@ -206,201 +245,212 @@ export function EquiposClient({ oficial }: Props) {
     setGuardandoEstado(false);
   };
 
+  const fichaActual = ficha ? equipos.find((e) => e.id === ficha.id) ?? ficha : null;
+  const IconoFicha = fichaActual ? iconoCategoria(fichaActual.categoria) : Package;
+
   return (
-    <div className="space-y-4">
-      <SectionHeading
+    <>
+      <PageHeader
         titulo="Equipamiento"
-        descripcion="Listado, fichas e historial de equipos del cuartel."
-        accion={
-          oficial ? <QuickAction icono={Plus} titulo="Nuevo equipo" onClick={abrirCrear} /> : null
+        acciones={
+          oficial ? (
+            <button
+              type="button"
+              onClick={abrirCrear}
+              aria-label="Nuevo equipo"
+              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
+              <Plus size={22} strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : undefined
         }
       />
 
-      <DashboardCard
-        titulo="Equipos"
-        descripcion="Buscá por código, nombre, categoría o ubicación y filtrá por estado."
-        encabezadoAccion={
-          <Button variant="ghost" size="sm" onClick={() => void cargar()} aria-label="Actualizar listado">
-            <RefreshCw className="h-4 w-4" aria-hidden />
-          </Button>
-        }
-      >
-        <div className="mb-4 grid gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-1">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
-              <Input
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar equipo..."
-                className="pl-9"
-                aria-label="Buscar equipo"
-              />
-            </div>
-          </div>
-          <Select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} aria-label="Filtrar por categoría">
-            <option value="todas">Todas las categorías</option>
-            {categorias.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </Select>
-          <Select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value as EstadoEquipo | "todos")}
-            aria-label="Filtrar por estado"
+      <div className="mx-auto w-full max-w-[1100px] space-y-4 px-4 pb-8 pt-4 lg:px-8">
+        <Buscador
+          value={busqueda}
+          onChange={setBusqueda}
+          placeholder="Buscar por nombre o código"
+          etiqueta="Buscar equipo"
+        />
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setFiltroCategoria("todas")}
+            className={`tap shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+              filtroCategoria === "todas" ? "bg-red text-surface" : "bg-surface text-label-2"
+            }`}
           >
-            <option value="todos">Todos los estados</option>
-            {ESTADOS_EQUIPO.map((est) => (
-              <option key={est} value={est}>{ETIQUETAS_ESTADO_EQUIPO[est]}</option>
-            ))}
-          </Select>
+            Todas
+          </button>
+          {categorias.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setFiltroCategoria(c)}
+              className={`tap shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                filtroCategoria === c ? "bg-red text-surface" : "bg-surface text-label-2"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
 
-        {cargando ? (
-          <div className="space-y-3" aria-busy="true">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
-          </div>
-        ) : error ? (
-          <Aviso variante="error">{error}</Aviso>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() => setFiltroEstado("todos")}
+            className={`tap shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+              filtroEstado === "todos" ? "bg-red text-surface" : "bg-surface text-label-2"
+            }`}
+          >
+            Todos
+          </button>
+          {ESTADO_CHIPS.map((e) => (
+            <button
+              key={e.valor}
+              type="button"
+              onClick={() => setFiltroEstado(e.valor)}
+              className={`tap shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                filtroEstado === e.valor ? "bg-red text-surface" : "bg-surface text-label-2"
+              }`}
+            >
+              {e.etiqueta}
+            </button>
+          ))}
+        </div>
+
+        {error ? (
+          <Grupo>
+            <div className="px-4 py-5">
+              <p className="text-[17px] font-semibold text-label">No se pudo cargar el equipamiento</p>
+              <p className="mt-1 text-[15px] text-label-2">{error}</p>
+            </div>
+          </Grupo>
+        ) : cargando ? (
+          <Grupo>
+            <div className="px-4 py-8 text-center text-[15px] text-label-2">Cargando equipamiento…</div>
+          </Grupo>
         ) : filtrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
-            <Wrench className="h-8 w-8" aria-hidden />
-            <p className="text-[14px]">
-              {equipos.length === 0 ? "No hay equipos registrados." : "No hay equipos que coincidan con la búsqueda."}
-            </p>
-          </div>
+          <Grupo>
+            <div className="px-4 py-8 text-center">
+              <Wrench size={22} strokeWidth={1.75} className="mx-auto text-label-3" aria-hidden />
+              <p className="mt-2 text-[15px] text-label-2">No se encontraron equipos</p>
+            </div>
+          </Grupo>
         ) : (
-          <div className="space-y-2">
-            {filtrados.map((e) => (
-              <div
-                key={e.id}
-                className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 transition-colors hover:bg-surface-hover sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[12px] font-bold text-ink-muted">{e.codigo}</span>
-                    <p className="font-semibold text-ink truncate">{e.nombre}</p>
-                    <Badge cargo="Bombero" />
-                  </div>
-                  <p className="mt-1 text-[13px] text-ink-muted">
-                    {e.categoria}{e.ubicacion ? ` · ${e.ubicacion}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <StatusPill estado={estadoPill(e.estado)} className="text-[11px]" />
-                  <Button variant="ghost" size="sm" onClick={() => void abrirFicha(e)} aria-label={`Ver ficha de ${e.nombre}`}>
-                    <Eye className="h-4 w-4" aria-hidden />
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => abrirCambioEstado(e)}>
-                    Cambiar estado
-                  </Button>
-                  {oficial ? (
-                    <Button variant="ghost" size="sm" onClick={() => abrirEditar(e)} aria-label={`Editar ${e.nombre}`}>
-                      <Pencil className="h-4 w-4" aria-hidden />
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
+          <Grupo>
+            <ul>
+              {filtrados.map((e, idx) => {
+                const Icono = iconoCategoria(e.categoria);
+                const subtitulo = [e.codigo, e.ubicacion].filter(Boolean).join(" · ");
+                return (
+                  <li key={e.id} className={idx > 0 ? "border-t border-separator" : ""}>
+                    <button
+                      type="button"
+                      onClick={() => void abrirFicha(e)}
+                      className="tap flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-label-2">
+                        <Icono size={22} strokeWidth={1.75} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[17px] font-semibold text-label">{e.nombre}</span>
+                        <span className="block truncate text-[15px] text-label-2">{subtitulo}</span>
+                      </span>
+                      <ChipEstado estado={e.estado} />
+                      <ChevronRight size={22} strokeWidth={1.75} className="shrink-0 text-label-3" aria-hidden />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </Grupo>
         )}
-      </DashboardCard>
+      </div>
 
       <Hoja
-        open={!!hojaForm}
-        onClose={() => { setHojaForm(null); setEquipoEditando(null); }}
-        title={hojaForm === "crear" ? "Nuevo equipo" : "Editar equipo"}
-      >
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void guardarForm(); }}>
-          {errorForm ? <Aviso variante="error">{errorForm}</Aviso> : null}
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Código *</span>
-            <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} maxLength={40} required />
-          </div>
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Nombre *</span>
-            <Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} maxLength={120} required />
-          </div>
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Categoría *</span>
-            <Input value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} maxLength={80} required />
-          </div>
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Ubicación</span>
-            <Input value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} maxLength={120} />
-          </div>
-          {hojaForm === "crear" ? (
-            <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Estado inicial</span>
-              <Select value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value as EstadoEquipo })}>
-                {ESTADOS_EQUIPO.map((est) => (
-                  <option key={est} value={est}>{ETIQUETAS_ESTADO_EQUIPO[est]}</option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Notas</span>
-            <Textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={3} maxLength={1000} />
-          </div>
-          <div className="flex gap-3 pt-2 border-t border-line">
-            <Button type="submit" className="flex-1" disabled={guardando}>
-              {guardando ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => { setHojaForm(null); setEquipoEditando(null); }}>
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      </Hoja>
-
-      <Hoja
-        open={!!ficha && !hojaEstado}
+        open={!!fichaActual && !hojaEstado}
         onClose={cerrarFicha}
-        title={ficha ? `Ficha: ${ficha.nombre}` : "Ficha"}
-        className="max-w-2xl"
+        title="Ficha del equipo"
+        className="sm:max-w-xl"
+        footer={
+          fichaActual ? (
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={abrirCambioEstado}>Cambiar estado</Button>
+              {oficial ? (
+                <Button variant="secondary" className="flex-1" onClick={() => { const eq = fichaActual; cerrarFicha(); abrirEditar(eq); }}>
+                  <Pencil size={22} strokeWidth={1.75} aria-hidden />
+                  Editar
+                </Button>
+              ) : null}
+            </div>
+          ) : undefined
+        }
       >
-        {ficha ? (
+        {fichaActual ? (
           <div className="space-y-4">
-            <div className="rounded-xl border border-line bg-bg-subtle p-3 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[12px] font-bold text-ink-muted">{ficha.codigo}</span>
-                <StatusPill estado={estadoPill(ficha.estado)} />
+            <div className="overflow-hidden rounded-[16px] bg-surface-2">
+              <div className="flex aspect-[4/3] w-full items-center justify-center bg-surface-2 text-label-3">
+                <IconoFicha size={44} strokeWidth={1.75} aria-hidden />
               </div>
-              <p className="text-[14px] text-ink"><span className="font-semibold">Categoría:</span> {ficha.categoria}</p>
-              <p className="text-[14px] text-ink"><span className="font-semibold">Ubicación:</span> {ficha.ubicacion || "Sin especificar"}</p>
-              {ficha.notas ? <p className="text-[14px] text-ink-muted whitespace-pre-wrap">{ficha.notas}</p> : null}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => abrirCambioEstado(ficha)}>Cambiar estado</Button>
-              {oficial ? <Button variant="secondary" size="sm" onClick={() => { cerrarFicha(); abrirEditar(ficha); }}>Editar</Button> : null}
+
+            <div>
+              <h3 className="text-[22px] font-bold text-label">{fichaActual.nombre}</h3>
+              <div className="mt-2"><ChipEstado estado={fichaActual.estado} /></div>
             </div>
-            <div className="space-y-2">
-              <h4 className="heading-display text-base text-ink">Historial de movimientos</h4>
+
+            <Grupo titulo="Datos">
+              {[
+                ["Código", fichaActual.codigo],
+                ["Categoría", fichaActual.categoria],
+                ["Ubicación", fichaActual.ubicacion || "Sin ubicación"],
+                ["Notas", fichaActual.notas || "Sin notas"],
+              ].map(([k, v], i, arr) => (
+                <div key={k} className={`px-4 py-3 ${i < arr.length - 1 ? "border-b border-separator" : ""}`}>
+                  <p className="text-[13px] font-medium tracking-[.3px] text-label-2 uppercase">{k}</p>
+                  <p className="mt-1 text-[17px] text-label">{v}</p>
+                </div>
+              ))}
+            </Grupo>
+
+            <Grupo titulo="Historial">
               {cargandoMov ? (
-                <div className="space-y-2" aria-busy="true">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
-                </div>
+                <div className="px-4 py-6 text-center text-[15px] text-label-2">Cargando historial…</div>
               ) : errorMov ? (
-                <Aviso variante="error">{errorMov}</Aviso>
+                <div className="px-4 py-4 text-[15px] text-red">{errorMov}</div>
               ) : movimientos.length === 0 ? (
-                <div className="rounded-lg border border-line-subtle bg-bg-subtle px-4 py-6 text-center text-[14px] text-ink-muted">
-                  Sin movimientos registrados.
-                </div>
+                <div className="px-4 py-6 text-center text-[15px] text-label-2">Sin movimientos registrados</div>
               ) : (
-                <div className="space-y-2">
-                  {movimientos.map((m) => (
-                    <div key={m.id} className="rounded-lg border border-line bg-surface p-3">
-                      <p className="text-[14px] font-semibold text-ink">{etiquetaAccionMovimiento(m.accion)}</p>
-                      <p className="font-mono text-[11px] text-ink-muted mt-1">
-                        {formatearFecha(m.fecha)} · {m.bombero_nombre ?? "Bombero"}
-                      </p>
-                      {m.nota ? <p className="mt-1 text-[13px] text-ink-muted">{m.nota}</p> : null}
-                    </div>
-                  ))}
+                <div className="px-4 py-4">
+                  <ol className="space-y-0">
+                    {movimientos.map((m, i) => (
+                      <li key={m.id} className="relative flex gap-3 pb-4 last:pb-0">
+                        {i < movimientos.length - 1 ? (
+                          <span className="absolute left-[4px] top-[14px] h-[calc(100%-10px)] w-px bg-separator" aria-hidden />
+                        ) : null}
+                        <span className="mt-1.5 h-[10px] w-[10px] shrink-0 rounded-full bg-label-3" aria-hidden />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[17px] font-medium text-label">{etiquetaAccionMovimiento(m.accion)}</p>
+                            {esDesdeChequeo(m) ? (
+                              <span className="rounded-full bg-yellow-tint px-2.5 py-1 text-[13px] font-medium text-yellow-ink">Desde chequeo</span>
+                            ) : null}
+                          </div>
+                          {m.nota ? <p className="mt-0.5 text-[15px] text-label-2">{m.nota}</p> : null}
+                          <p className="num mt-1 text-[13px] text-label-2">
+                            {m.bombero_nombre ?? "Bombero"} · {formatearFecha(m.fecha)}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
                 </div>
               )}
-            </div>
+            </Grupo>
           </div>
         ) : null}
       </Hoja>
@@ -408,42 +458,68 @@ export function EquiposClient({ oficial }: Props) {
       <Hoja
         open={hojaEstado}
         onClose={() => setHojaEstado(false)}
-        title={ficha ? `Cambiar estado: ${ficha.nombre}` : "Cambiar estado"}
-      >
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); void guardarCambioEstado(); }}>
-          {errorEstado ? <Aviso variante="error">{errorEstado}</Aviso> : null}
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Nuevo estado</span>
-            <Select value={nuevoEstado} onChange={(e) => setNuevoEstado(e.target.value as EstadoEquipo)}>
-              {ESTADOS_EQUIPO.map((est) => (
-                <option key={est} value={est}>{ETIQUETAS_ESTADO_EQUIPO[est]}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <span className="text-[14px] font-semibold text-ink">Nota *</span>
-            <Textarea
-              value={notaEstado}
-              onChange={(e) => setNotaEstado(e.target.value)}
-              rows={3}
-              maxLength={500}
-              placeholder="Describí el motivo del cambio..."
-              required
-            />
-          </div>
-          <p className="text-[13px] text-ink-muted">
-            El cambio de estado queda registrado en el historial del equipo.
-          </p>
-          <div className="flex gap-3 pt-2 border-t border-line">
-            <Button type="submit" className="flex-1" disabled={guardandoEstado || !notaEstado.trim()}>
-              {guardandoEstado ? "Guardando..." : "Guardar cambio"}
-            </Button>
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setHojaEstado(false)}>
+        title="Cambiar estado"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setHojaEstado(false)} disabled={guardandoEstado}>
               Cancelar
             </Button>
+            <Button className="flex-1" onClick={() => void guardarCambioEstado()} disabled={guardandoEstado || !notaEstado.trim()}>
+              {guardandoEstado ? "Guardando…" : "Guardar"}
+            </Button>
           </div>
-        </form>
+        }
+      >
+        <div className="space-y-4">
+          {errorEstado ? <p role="alert" className="text-[15px] font-semibold text-red">{errorEstado}</p> : null}
+          <Segmentado
+            etiqueta="Nuevo estado"
+            valor={nuevoEstado}
+            onChange={(v) => setNuevoEstado(v as EstadoEquipo)}
+            opciones={ESTADO_CHIPS.map((e) => ({ valor: e.valor, etiqueta: e.etiqueta }))}
+          />
+          <Textarea
+            label="Nota"
+            value={notaEstado}
+            onChange={(e) => setNotaEstado(e.target.value)}
+            rows={4}
+            maxLength={500}
+            required
+            placeholder="Describí el motivo del cambio"
+          />
+        </div>
       </Hoja>
-    </div>
+
+      <Hoja
+        open={!!hojaForm}
+        onClose={() => { setHojaForm(null); setEquipoEditando(null); }}
+        title={hojaForm === "crear" ? "Nuevo equipo" : "Editar equipo"}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => { setHojaForm(null); setEquipoEditando(null); }} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button className="flex-1" onClick={() => void guardarForm()} disabled={guardando}>
+              {guardando ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {errorForm ? <p role="alert" className="text-[15px] font-semibold text-red">{errorForm}</p> : null}
+          <Input label="Código" value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} maxLength={40} required />
+          <Input label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} maxLength={120} required />
+          <Input label="Categoría" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} maxLength={80} required />
+          <Input label="Ubicación" value={form.ubicacion} onChange={(e) => setForm({ ...form, ubicacion: e.target.value })} maxLength={120} />
+          <Select label="Estado" value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value as EstadoEquipo })}>
+            {ESTADOS_EQUIPO.map((est) => (
+              <option key={est} value={est}>{ETIQUETAS_ESTADO_EQUIPO[est]}</option>
+            ))}
+          </Select>
+          <Textarea label="Notas" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={4} maxLength={1000} />
+          <FotoInput value={foto} onChange={setFoto} label="Foto" />
+        </div>
+      </Hoja>
+    </>
   );
 }
