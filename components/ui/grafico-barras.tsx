@@ -1,4 +1,4 @@
-type Tono = "fire" | "brass" | "alarm" | "ok" | "ink";
+type Tono = "red" | "yellow" | "green" | "ink";
 
 type Barra = {
   etiqueta: string;
@@ -13,11 +13,10 @@ type Props = {
 };
 
 const TONOS: Record<Tono, string> = {
-  fire: "text-fire",
-  brass: "text-brass",
-  alarm: "text-alarm",
-  ok: "text-ok",
-  ink: "text-ink-muted",
+  red: "text-red",
+  yellow: "text-yellow-ink",
+  green: "text-green-ink",
+  ink: "text-label-2",
 };
 
 function acortar(texto: string): string {
@@ -58,14 +57,14 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
                 y2={y}
                 stroke="currentColor"
                 strokeWidth={1}
-                className="text-line-subtle"
+                className="text-separator"
               />
               <text
                 x={izquierda - 10}
                 y={y + 4}
                 textAnchor="end"
                 fontSize={13}
-                className="fill-current font-mono text-ink-secondary"
+                className="fill-current font-mono text-label-2"
               >
                 {Math.round(maximo * proporcion)}
               </text>
@@ -77,7 +76,7 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
           const x = izquierda + indice * celda + (celda - anchoBarra) / 2;
           const y = arriba + interiorAlto - altura;
           return (
-            <g key={`${dato.etiqueta}-${indice}`} className={TONOS[dato.tono ?? "fire"]}>
+            <g key={`${dato.etiqueta}-${indice}`} className={TONOS[dato.tono ?? "red"]}>
               <rect
                 x={x}
                 y={y}
@@ -101,7 +100,7 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
                 y={alto - abajo + 22}
                 textAnchor="middle"
                 fontSize={13}
-                className="fill-current text-ink-muted"
+                className="fill-current text-label-2"
               >
                 {acortar(dato.etiqueta)}
               </text>
@@ -115,27 +114,27 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
           y2={arriba + interiorAlto}
           stroke="currentColor"
           strokeWidth={1}
-          className="text-line"
+          className="text-separator"
         />
       </svg>
       <figcaption className="sr-only">{titulo}</figcaption>
       <details className="no-print mt-3">
-        <summary className="min-h-11 cursor-pointer text-[14px] font-semibold text-ink">
+        <summary className="min-h-11 cursor-pointer text-[15px] font-semibold text-label">
           Ver datos en tabla
         </summary>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full border-collapse text-left text-[14px]">
             <thead>
-              <tr className="border-b border-line text-ink-muted">
+              <tr className="border-b border-separator text-label-2">
                 <th scope="col" className="px-2 py-2">Categoría</th>
                 <th scope="col" className="px-2 py-2 text-right">Valor</th>
               </tr>
             </thead>
             <tbody>
               {datos.map((dato, indice) => (
-                <tr key={`${dato.etiqueta}-${indice}`} className="border-b border-line-subtle">
-                  <th scope="row" className="px-2 py-2 font-normal">{dato.etiqueta}</th>
-                  <td className="px-2 py-2 text-right tabular-nums">
+                <tr key={`${dato.etiqueta}-${indice}`} className="border-b border-separator">
+                  <th scope="row" className="px-2 py-2 font-normal text-label">{dato.etiqueta}</th>
+                  <td className="px-2 py-2 text-right tabular-nums text-label">
                     {dato.valor}
                     {unidad}
                   </td>

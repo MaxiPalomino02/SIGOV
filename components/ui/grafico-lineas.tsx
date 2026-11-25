@@ -1,4 +1,4 @@
-type Tono = "fire" | "brass" | "alarm" | "ok" | "ink";
+type Tono = "red" | "yellow" | "green" | "ink";
 
 type Punto = { etiqueta: string; valor: number };
 
@@ -15,11 +15,10 @@ type Props = {
 };
 
 const TONOS: Record<Tono, string> = {
-  fire: "text-fire",
-  brass: "text-brass",
-  alarm: "text-alarm",
-  ok: "text-ok",
-  ink: "text-ink-muted",
+  red: "text-red",
+  yellow: "text-yellow-ink",
+  green: "text-green-ink",
+  ink: "text-label-2",
 };
 
 function acortar(texto: string): string {
@@ -68,14 +67,14 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
                 y2={y}
                 stroke="currentColor"
                 strokeWidth={1}
-                className="text-line-subtle"
+                className="text-separator"
               />
               <text
                 x={izquierda - 10}
                 y={y + 4}
                 textAnchor="end"
                 fontSize={13}
-                className="fill-current font-mono text-ink-secondary"
+                className="fill-current font-mono text-label-2"
               >
                 {Math.round(maximo * proporcion)}
               </text>
@@ -89,7 +88,7 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
             y={alto - abajo + 22}
             textAnchor="middle"
             fontSize={13}
-            className="fill-current text-ink-muted"
+            className="fill-current text-label-2"
           >
             {acortar(etiqueta)}
           </text>
@@ -101,7 +100,7 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
           return (
             <g
               key={serie.nombre}
-              className={TONOS[serie.tono ?? "fire"]}
+              className={TONOS[serie.tono ?? "red"]}
               fill="currentColor"
               stroke="currentColor"
             >
@@ -128,12 +127,12 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
       </svg>
       <figcaption className="sr-only">{titulo}</figcaption>
       {activas.length > 1 ? (
-        <ul className="no-print mt-2 flex flex-wrap gap-3 text-[13px] text-ink-muted">
+        <ul className="no-print mt-2 flex flex-wrap gap-3 text-[13px] text-label-2">
           {activas.map((serie) => (
             <li key={serie.nombre} className="flex items-center gap-2">
               <span
                 aria-hidden
-                className={`inline-block h-2.5 w-2.5 rounded-full bg-current ${TONOS[serie.tono ?? "fire"]}`}
+                className={`inline-block h-2.5 w-2.5 rounded-full bg-current ${TONOS[serie.tono ?? "red"]}`}
               />
               {serie.nombre}
             </li>
@@ -141,13 +140,13 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
         </ul>
       ) : null}
       <details className="no-print mt-3">
-        <summary className="min-h-11 cursor-pointer text-[14px] font-semibold text-ink">
+        <summary className="min-h-11 cursor-pointer text-[15px] font-semibold text-label">
           Ver datos en tabla
         </summary>
         <div className="mt-2 overflow-x-auto">
           <table className="w-full border-collapse text-left text-[14px]">
             <thead>
-              <tr className="border-b border-line text-ink-muted">
+              <tr className="border-b border-separator text-label-2">
                 <th scope="col" className="px-2 py-2">Período</th>
                 {activas.map((serie) => (
                   <th key={serie.nombre} scope="col" className="px-2 py-2 text-right">
@@ -158,10 +157,10 @@ export function GraficoLineas({ titulo, series, unidad = "" }: Props) {
             </thead>
             <tbody>
               {etiquetas.map((etiqueta, indice) => (
-                <tr key={`${etiqueta}-${indice}`} className="border-b border-line-subtle">
-                  <th scope="row" className="px-2 py-2 font-normal">{etiqueta}</th>
+                <tr key={`${etiqueta}-${indice}`} className="border-b border-separator">
+                  <th scope="row" className="px-2 py-2 font-normal text-label">{etiqueta}</th>
                   {activas.map((serie) => (
-                    <td key={serie.nombre} className="px-2 py-2 text-right tabular-nums">
+                    <td key={serie.nombre} className="px-2 py-2 text-right tabular-nums text-label">
                       {serie.puntos[indice]?.valor ?? 0}
                       {unidad}
                     </td>
