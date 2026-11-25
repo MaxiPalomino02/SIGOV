@@ -1,69 +1,57 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  CalendarDays,
   MapPin,
+  Pencil,
   Plus,
-  X,
+  Trash2,
 } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { borrarEvento, crearEvento, editarEvento } from "./actions";
+import { formatFechaKey, hoyArgentina, sumarDias } from "@/lib/tablero";
 import {
-  dateToKey,
-  formatFechaKey,
-  hoyArgentina,
-  sumarDias,
-} from "@/lib/tablero";
-import {
-  TipoEvento,
   TIPOS_EVENTO,
   ETIQUETAS_TIPO,
-  ICONOS_TIPO,
   type Evento,
-  obtenerColorTipo,
-  obtenerFondoTipo,
-  formatearHoraEvento,
+  type TipoEvento,
   cargarEventos,
+  formatearHoraEvento,
 } from "@/lib/eventos";
-import { Aviso } from "@/components/ui/aviso";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { EstadoVacio } from "@/components/ui/estado-vacio";
-import { Hoja } from "@/components/ui/hoja";
-import { QuickAction } from "@/components/ui/quick-action";
-import { SectionHeading } from "@/components/ui/section-heading";
-import * as Lucide from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { Grupo } from "@/components/ui/grupo";
+import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
-const ICONOS_MAP: Record<string, LucideIcon> = {
-  GraduationCap: Lucide.GraduationCap,
-  Users: Lucide.Users,
-  Flame: Lucide.Flame,
-  Award: Lucide.Award,
-  Calendar: Lucide.Calendar,
-  AlertTriangle: Lucide.AlertTriangle,
-  Edit2: Lucide.Edit2,
-};
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const FILTROS: Array<"todos" | TipoEvento> = ["todos", ...TIPOS_EVENTO];
 
-const getIcon = (nombre: string): LucideIcon => ICONOS_MAP[nombre] ?? Lucide.AlertTriangle;
+function capitalizar(texto: string) {
+  return texto.length > 0 ? texto[0].toUpperCase() + texto.slice(1) : texto;
+}
 
-const DIAS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
+function nombreMes(anio: number, mes: number) {
+  const nombre = new Date(Date.UTC(anio, mes, 1)).toLocaleString("es-AR", {
+    month: "long",
+    timeZone: "UTC",
+  });
+  return `${capitalizar(nombre)} ${anio}`;
+}
 
 function fechaDeEvento(e: Evento): string {
-  const d = new Date(e.inicio);
   const partes = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Argentina/Tucuman",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(d);
+  }).formatToParts(new Date(e.inicio));
   const get = (t: string) => partes.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
@@ -83,53 +71,79 @@ function aInputLocal(iso: string): string {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
+function inicioMesKey(anio: number, mes: number) {
+  return `${anio}-${String(mes + 1).padStart(2, "0")}-01`;
+}
+
+function finMesKey(anio: number, mes: number) {
+  const fin = new Date(Date.UTC(anio, mes + 1, 0));
+  return fin.toISOString().slice(0, 10);
+}
+
 function generarSemanas(anio: number, mes: number): string[][] {
-  // Usar zona horaria de Tucumán para la grilla del calendario
-  const inicio = new Date();
-  inicio.setFullYear(anio, mes, 1);
-  inicio.setHours(0, 0, 0, 0);
-  // Ajustar a zona horaria de Tucumán
-  const partes = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Argentina/Tucuman",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(inicio);
-  const get = (t: string) => partes.find((p) => p.type === t)?.value ?? "";
-  const anioTuc = parseInt(get("year"));
-  const mesTuc = parseInt(get("month")) - 1;
-  const diaTuc = parseInt(get("day"));
-
-  const inicioTuc = new Date(anioTuc, mesTuc, diaTuc);
-  const dSemana = inicioTuc.getDay(); // 0 = Domingo
-  const offset = dSemana === 0 ? -6 : 1 - dSemana;
-  inicioTuc.setDate(inicioTuc.getDate() + offset);
-
-  // Último día del mes en Tucumán
-  const finTuc = new Date(anioTuc, mesTuc + 1, 0);
-  const dFin = finTuc.getDay();
-  const offsetFin = dFin === 0 ? 0 : 7 - dFin;
-  finTuc.setDate(finTuc.getDate() + offsetFin);
-
+  const inicioMes = inicioMesKey(anio, mes);
+  const finMes = finMesKey(anio, mes);
+  const diaSemanaInicio = new Date(`${inicioMes}T00:00:00Z`).getUTCDay();
+  const offsetInicio = diaSemanaInicio === 0 ? -6 : 1 - diaSemanaInicio;
+  const diaSemanaFin = new Date(`${finMes}T00:00:00Z`).getUTCDay();
+  const offsetFin = diaSemanaFin === 0 ? 0 : 7 - diaSemanaFin;
+  let cursor = sumarDias(inicioMes, offsetInicio);
+  const finGrid = sumarDias(finMes, offsetFin);
   const dias: string[] = [];
-  let cursor = inicioTuc;
-  while (cursor <= finTuc) {
-    const anioStr = cursor.getFullYear();
-    const mesStr = String(cursor.getMonth() + 1).padStart(2, "0");
-    const diaStr = String(cursor.getDate()).padStart(2, "0");
-    dias.push(`${anioStr}-${mesStr}-${diaStr}`);
-    cursor = new Date(cursor);
-    cursor.setDate(cursor.getDate() + 1);
+  while (cursor <= finGrid) {
+    dias.push(cursor);
+    cursor = sumarDias(cursor, 1);
   }
-
   const semanas: string[][] = [];
-  for (let i = 0; i < dias.length; i += 7) {
-    semanas.push(dias.slice(i, i + 7));
-  }
+  for (let i = 0; i < dias.length; i += 7) semanas.push(dias.slice(i, i + 7));
   return semanas;
+}
+
+function semanaDe(fechaKey: string) {
+  const d = new Date(`${fechaKey}T00:00:00Z`);
+  const dow = d.getUTCDay();
+  const offset = dow === 0 ? -6 : 1 - dow;
+  const lunes = sumarDias(fechaKey, offset);
+  return Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
+}
+
+function encabezadoDia(fechaKey: string) {
+  const [anio, mes, dia] = fechaKey.split("-").map(Number);
+  const d = new Date(anio, (mes ?? 1) - 1, dia ?? 1);
+  const nombre = d.toLocaleDateString("es-AR", { weekday: "long" }).toUpperCase();
+  const dd = String(dia ?? "").padStart(2, "0");
+  const mm = String(mes ?? "").padStart(2, "0");
+  return `${nombre} ${dd}/${mm}`;
+}
+
+function horaRango(inicio: string, fin: string) {
+  return `${formatearHoraEvento(inicio)} - ${formatearHoraEvento(fin)}`;
+}
+
+function colorBarra(tipo: TipoEvento) {
+  if (tipo === "simulacro") return "bg-red";
+  if (tipo === "capacitacion" || tipo === "acto") return "bg-yellow";
+  return "bg-label-3";
+}
+
+function colorPunto(tipo: TipoEvento) {
+  if (tipo === "simulacro") return "bg-red";
+  if (tipo === "capacitacion" || tipo === "acto") return "bg-yellow";
+  return "bg-label-3";
+}
+
+function ChipTipo({ tipo }: { tipo: TipoEvento }) {
+  const tono =
+    tipo === "simulacro"
+      ? "bg-red-tint text-red"
+      : tipo === "capacitacion" || tipo === "acto"
+        ? "bg-yellow-tint text-yellow-ink"
+        : "bg-surface-2 text-label-2";
+  return (
+    <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[13px] font-medium ${tono}`}>
+      {ETIQUETAS_TIPO[tipo]}
+    </span>
+  );
 }
 
 type CalendarioClientProps = {
@@ -140,22 +154,25 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [filtroTipo, setFiltroTipo] = useState<"todos" | TipoEvento>("todos");
+  const hoy = hoyArgentina();
   const [anio, setAnio] = useState<number>(() => {
-    const hoy = new Date(hoyArgentina());
-    return hoy.getFullYear();
+    const d = new Date(`${hoyArgentina()}T00:00:00`);
+    return d.getFullYear();
   });
   const [mes, setMes] = useState<number>(() => {
-    const hoy = new Date(hoyArgentina());
-    return hoy.getMonth();
+    const d = new Date(`${hoyArgentina()}T00:00:00`);
+    return d.getMonth();
   });
-  const [hojaOpen, setHojaOpen] = useState(false);
-  const [hojaModo, setHojaModo] = useState<"detalle" | "crear" | "editar">("detalle");
-  const [hojaEvento, setHojaEvento] = useState<Evento | null>(null);
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string>(hoyArgentina());
+  const [hojaDiaOpen, setHojaDiaOpen] = useState(false);
+  const [hojaFormOpen, setHojaFormOpen] = useState(false);
+  const [hojaDetalleOpen, setHojaDetalleOpen] = useState(false);
+  const [eventoDetalle, setEventoDetalle] = useState<Evento | null>(null);
+  const [editando, setEditando] = useState<Evento | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [errorHoja, setErrorHoja] = useState<string | null>(null);
-  const [eliminando, setEliminando] = useState(false);
-  const [eventoEliminandoId, setEventoEliminandoId] = useState<string | null>(null);
+  const [confirmarBorrar, setConfirmarBorrar] = useState(false);
   const [formulario, setFormulario] = useState({
     titulo: "",
     descripcion: "",
@@ -164,6 +181,7 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
     fin: "",
     lugar: "",
   });
+  const refsDias = useRef<Record<string, HTMLDivElement | null>>({});
 
   const recargar = useCallback(async () => {
     try {
@@ -197,58 +215,77 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
     };
   }, [recargar]);
 
-  const filtrados = eventos.filter(
-    (e) => filtroTipo === "todos" || e.tipo === filtroTipo
+  const filtrados = useMemo(
+    () => eventos.filter((e) => filtroTipo === "todos" || e.tipo === filtroTipo),
+    [eventos, filtroTipo]
   );
 
-  const eventosPorDia = new Map<string, Evento[]>();
-  for (const e of filtrados) {
-    const f = fechaDeEvento(e);
-    const arr = eventosPorDia.get(f) ?? [];
-    arr.push(e);
-    eventosPorDia.set(f, arr);
-  }
+  const eventosPorDia = useMemo(() => {
+    const mapa = new Map<string, Evento[]>();
+    for (const e of filtrados) {
+      const f = fechaDeEvento(e);
+      const arr = mapa.get(f) ?? [];
+      arr.push(e);
+      mapa.set(f, arr);
+    }
+    for (const arr of mapa.values()) arr.sort((a, b) => a.inicio.localeCompare(b.inicio));
+    return mapa;
+  }, [filtrados]);
 
-  const semanas = generarSemanas(anio, mes);
-  const hoy = hoyArgentina();
+  const semanas = useMemo(() => generarSemanas(anio, mes), [anio, mes]);
+  const semanaActual = useMemo(() => semanaDe(diaSeleccionado), [diaSeleccionado]);
+  const diasConEventos = useMemo(() => Array.from(eventosPorDia.keys()).sort(), [eventosPorDia]);
+  const eventosDiaSeleccionado = eventosPorDia.get(diaSeleccionado) ?? [];
 
   const mesAnterior = () => {
-    setMes((m) => (m === 0 ? 11 : m - 1));
-    setAnio((a) => (mes === 0 ? a - 1 : a));
+    setMes((m) => {
+      if (m === 0) {
+        setAnio((a) => a - 1);
+        return 11;
+      }
+      return m - 1;
+    });
   };
   const mesSiguiente = () => {
-    setMes((m) => (m === 11 ? 0 : m + 1));
-    setAnio((a) => (mes === 11 ? a + 1 : a));
+    setMes((m) => {
+      if (m === 11) {
+        setAnio((a) => a + 1);
+        return 0;
+      }
+      return m + 1;
+    });
   };
   const irAHoy = () => {
-    const hoyDate = new Date(hoy);
-    setMes(hoyDate.getMonth());
-    setAnio(hoyDate.getFullYear());
+    const d = new Date(`${hoy}T00:00:00`);
+    setAnio(d.getFullYear());
+    setMes(d.getMonth());
+    setDiaSeleccionado(hoy);
   };
 
-  const abrirCrear = () => {
-    const ahora = new Date();
-    const inicio = new Date(ahora.getTime() + 60 * 60 * 1000);
-    const fin = new Date(inicio.getTime() + 2 * 60 * 60 * 1000);
+  const abrirCrear = (fechaBase?: string) => {
+    const base = fechaBase ?? diaSeleccionado;
+    const inicio = `${base}T09:00`;
+    const fin = `${base}T10:00`;
     setFormulario({
       titulo: "",
       descripcion: "",
       tipo: "capacitacion",
-      inicio: aInputLocal(inicio.toISOString()),
-      fin: aInputLocal(fin.toISOString()),
+      inicio,
+      fin,
       lugar: "",
     });
-    setHojaModo("crear");
-    setHojaEvento(null);
-    setHojaOpen(true);
+    setEditando(null);
     setErrorHoja(null);
+    setHojaDetalleOpen(false);
+    setHojaDiaOpen(false);
+    setHojaFormOpen(true);
   };
 
   const abrirDetalle = (e: Evento) => {
-    setHojaModo("detalle");
-    setHojaEvento(e);
-    setHojaOpen(true);
+    setEventoDetalle(e);
+    setConfirmarBorrar(false);
     setErrorHoja(null);
+    setHojaDetalleOpen(true);
   };
 
   const abrirEditar = (e: Evento) => {
@@ -260,15 +297,20 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
       fin: aInputLocal(e.fin),
       lugar: e.lugar,
     });
-    setHojaModo("editar");
-    setHojaEvento(e);
-    setHojaOpen(true);
+    setEditando(e);
+    setConfirmarBorrar(false);
     setErrorHoja(null);
+    setHojaDetalleOpen(false);
+    setHojaFormOpen(true);
   };
 
-  const cerrarHoja = () => {
-    setHojaOpen(false);
-    setHojaEvento(null);
+  const cerrarHojas = () => {
+    setHojaDiaOpen(false);
+    setHojaFormOpen(false);
+    setHojaDetalleOpen(false);
+    setEventoDetalle(null);
+    setEditando(null);
+    setConfirmarBorrar(false);
     setErrorHoja(null);
   };
 
@@ -276,38 +318,31 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
     e.preventDefault();
     setErrorHoja(null);
     setGuardando(true);
-
     try {
-      if (hojaModo === "editar" && hojaEvento) {
-        const res = await editarEvento(
-          hojaEvento.id,
-          formulario.titulo,
-          formulario.descripcion,
-          formulario.tipo,
-          formulario.inicio,
-          formulario.fin,
-          formulario.lugar
-        );
-        if (!res.ok) {
-          setErrorHoja(res.error);
-          return;
-        }
-      } else {
-        const res = await crearEvento(
-          formulario.titulo,
-          formulario.descripcion,
-          formulario.tipo,
-          formulario.inicio,
-          formulario.fin,
-          formulario.lugar
-        );
-        if (!res.ok) {
-          setErrorHoja(res.error);
-          return;
-        }
+      const res = editando
+        ? await editarEvento(
+            editando.id,
+            formulario.titulo,
+            formulario.descripcion,
+            formulario.tipo,
+            formulario.inicio,
+            formulario.fin,
+            formulario.lugar
+          )
+        : await crearEvento(
+            formulario.titulo,
+            formulario.descripcion,
+            formulario.tipo,
+            formulario.inicio,
+            formulario.fin,
+            formulario.lugar
+          );
+      if (!res.ok) {
+        setErrorHoja(res.error);
+        return;
       }
-      cerrarHoja();
-      recargar();
+      cerrarHojas();
+      await recargar();
     } catch (err) {
       console.error("Error guardando evento:", err);
       setErrorHoja("Error inesperado. Volvé a intentar.");
@@ -317,455 +352,439 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
   };
 
   const onBorrar = async () => {
-    if (!hojaEvento) return;
-    setEliminando(true);
-    setEventoEliminandoId(hojaEvento.id);
+    if (!eventoDetalle) return;
+    setGuardando(true);
+    setErrorHoja(null);
     try {
-      const res = await borrarEvento(hojaEvento.id);
+      const res = await borrarEvento(eventoDetalle.id);
       if (!res.ok) {
         setErrorHoja(res.error);
         return;
       }
-      cerrarHoja();
-      recargar();
+      cerrarHojas();
+      await recargar();
     } catch (err) {
       console.error("Error borrando evento:", err);
       setErrorHoja("Error inesperado. Volvé a intentar.");
     } finally {
-      setEliminando(false);
-      setEventoEliminandoId(null);
+      setGuardando(false);
     }
   };
 
-  if (loading) {
-    return (
-      <DashboardCard
-        titulo="Calendario"
-        descripcion="Agenda institucional del cuartel."
-        loading
-      />
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardCard
-        titulo="Calendario"
-        descripcion="Agenda institucional del cuartel."
-        error={error}
-      />
-    );
-  }
+  const saltarADia = (fechaKey: string) => {
+    setDiaSeleccionado(fechaKey);
+    const d = new Date(`${fechaKey}T00:00:00`);
+    setAnio(d.getFullYear());
+    setMes(d.getMonth());
+    window.requestAnimationFrame(() => {
+      refsDias.current[fechaKey]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   return (
-    <div className="space-y-4">
-      <SectionHeading
-        titulo="Calendario"
-        descripcion="Agenda institucional del cuartel. Filtrá por tipo para ver solo lo que necesitás."
-        accion={
-          oficial ? (
-            <QuickAction
-              icono={Plus}
-              titulo="Nuevo evento"
-              onClick={abrirCrear}
-              className="hidden sm:inline-flex"
-            />
-          ) : null
+    <>
+      <PageHeader
+        titulo={nombreMes(anio, mes)}
+        acciones={
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={mesAnterior}
+              aria-label="Mes anterior"
+              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
+              <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={irAHoy}
+              className="tap min-h-[44px] rounded-[14px] px-3 text-[15px] font-semibold text-red transition-colors hover:bg-red-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
+              Hoy
+            </button>
+            <button
+              type="button"
+              onClick={mesSiguiente}
+              aria-label="Mes siguiente"
+              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+            >
+              <ChevronRight size={22} strokeWidth={1.75} aria-hidden />
+            </button>
+            {oficial ? (
+              <button
+                type="button"
+                onClick={() => abrirCrear()}
+                aria-label="Nuevo evento"
+                className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+              >
+                <Plus size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+          </div>
         }
       />
 
-      <DashboardCard
-        titulo="Filtros"
-        descripcion="Seleccioná un tipo para filtrar la vista."
-        className="hidden lg:block"
+      <div className="mx-auto w-full max-w-[1100px] space-y-4 px-4 pb-8 pt-4 lg:px-8">
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {FILTROS.map((f) => {
+            const activo = filtroTipo === f;
+            const etiqueta = f === "todos" ? "Todos" : ETIQUETAS_TIPO[f];
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFiltroTipo(f)}
+                className={`tap shrink-0 rounded-full px-4 py-2 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                  activo ? "bg-red text-surface" : "bg-surface text-label-2"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            );
+          })}
+        </div>
+
+        {error ? (
+          <Grupo>
+            <div className="px-4 py-5">
+              <p className="text-[17px] font-semibold text-label">No se pudo cargar el calendario</p>
+              <p className="mt-1 text-[15px] text-label-2">{error}</p>
+            </div>
+          </Grupo>
+        ) : loading ? (
+          <Grupo>
+            <div className="px-4 py-8 text-center text-[15px] text-label-2">Cargando calendario…</div>
+          </Grupo>
+        ) : (
+          <>
+            <div className="hidden lg:block">
+              <Grupo>
+                <div className="p-4">
+                  <div className="grid grid-cols-7 gap-2">
+                    {DIAS.map((d) => (
+                      <div key={d} className="py-2 text-center text-[13px] font-semibold text-label-2">
+                        {d}
+                      </div>
+                    ))}
+                    {semanas.flat().map((fechaKey) => {
+                      const [ya, ma, da] = fechaKey.split("-").map(Number);
+                      const esMesActual = ya === anio && ma === mes + 1;
+                      const esHoy = fechaKey === hoy;
+                      const evs = eventosPorDia.get(fechaKey) ?? [];
+                      const visibles = evs.slice(0, 3);
+                      const extra = evs.length - visibles.length;
+                      return (
+                        <button
+                          key={fechaKey}
+                          type="button"
+                          onClick={() => {
+                            setDiaSeleccionado(fechaKey);
+                            setHojaDiaOpen(true);
+                          }}
+                          className="tap flex min-h-[112px] flex-col items-center rounded-[14px] bg-surface px-2 py-2 text-center transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+                          aria-label={`Ver eventos del ${formatFechaKey(fechaKey)}`}
+                        >
+                          <span
+                            className={`flex h-8 w-8 items-center justify-center rounded-full text-[17px] font-semibold ${
+                              esHoy
+                                ? "bg-red text-surface"
+                                : esMesActual
+                                  ? "text-label"
+                                  : "text-label-3"
+                            }`}
+                          >
+                            {da}
+                          </span>
+                          <div className="mt-2 flex min-h-[14px] items-center justify-center gap-1">
+                            {visibles.map((ev) => (
+                              <span
+                                key={ev.id}
+                                className={`h-[6px] w-[6px] rounded-full ${colorPunto(ev.tipo)}`}
+                                aria-hidden
+                              />
+                            ))}
+                            {extra > 0 ? <span className="text-[13px] text-label-2">+{extra}</span> : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Grupo>
+            </div>
+
+            <div className="space-y-4 lg:hidden">
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {semanaActual.map((fechaKey) => {
+                  const dia = Number(fechaKey.slice(8, 10));
+                  const seleccionado = fechaKey === diaSeleccionado;
+                  const esHoy = fechaKey === hoy;
+                  return (
+                    <button
+                      key={fechaKey}
+                      type="button"
+                      onClick={() => saltarADia(fechaKey)}
+                      aria-label={`Ir al ${formatFechaKey(fechaKey)}`}
+                      className={`tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[17px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                        esHoy
+                          ? "bg-red text-surface"
+                          : seleccionado
+                            ? "bg-red-tint text-red"
+                            : "bg-surface text-label"
+                      }`}
+                    >
+                      {dia}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-4">
+                {diasConEventos.length === 0 ? (
+                  <Grupo>
+                    <div className="px-4 py-8 text-center">
+                      <CalendarDays size={22} strokeWidth={1.75} className="mx-auto text-label-3" aria-hidden />
+                      <p className="mt-2 text-[15px] text-label-2">Sin eventos</p>
+                    </div>
+                  </Grupo>
+                ) : (
+                  diasConEventos.map((fechaKey) => {
+                    const evs = eventosPorDia.get(fechaKey) ?? [];
+                    return (
+                      <div
+                        key={fechaKey}
+                        ref={(el) => {
+                          refsDias.current[fechaKey] = el;
+                        }}
+                        className="scroll-mt-28"
+                      >
+                        <p className="mb-2 px-1 text-[13px] font-semibold tracking-[.3px] text-label-2">
+                          {encabezadoDia(fechaKey)}
+                        </p>
+                        <Grupo>
+                          {evs.length === 0 ? (
+                            <div className="px-4 py-3 text-[15px] text-label-2">Sin eventos</div>
+                          ) : (
+                            <ul>
+                              {evs.map((ev, idx) => (
+                                <li key={ev.id} className={idx > 0 ? "border-t border-separator" : ""}>
+                                  <button
+                                    type="button"
+                                    onClick={() => abrirDetalle(ev)}
+                                    className="tap flex w-full items-stretch gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+                                  >
+                                    <span className={`mt-1 w-1 shrink-0 rounded-full ${colorBarra(ev.tipo)}`} aria-hidden />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="flex items-start justify-between gap-3">
+                                        <span className="min-w-0">
+                                          <span className="num block text-[15px] font-semibold text-label">
+                                            {horaRango(ev.inicio, ev.fin)}
+                                          </span>
+                                          <span className="mt-0.5 block text-[17px] font-medium text-label">{ev.titulo}</span>
+                                          {ev.lugar ? (
+                                            <span className="mt-0.5 block truncate text-[15px] text-label-2">{ev.lugar}</span>
+                                          ) : null}
+                                        </span>
+                                        <ChipTipo tipo={ev.tipo} />
+                                      </span>
+                                    </span>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </Grupo>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <Hoja
+        open={hojaDiaOpen}
+        onClose={() => setHojaDiaOpen(false)}
+        title={formatFechaKey(diaSeleccionado)}
+        footer={
+          oficial ? (
+            <Button className="w-full" onClick={() => abrirCrear(diaSeleccionado)}>
+              <Plus size={22} strokeWidth={1.75} aria-hidden />
+              Nuevo evento
+            </Button>
+          ) : undefined
+        }
       >
-        <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor="filtro-tipo" className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">
-            Tipo
-          </label>
-          <Select id="filtro-tipo" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} className="w-48">
-            <option value="todos">Todos los tipos</option>
+        {eventosDiaSeleccionado.length === 0 ? (
+          <p className="text-[15px] text-label-2">Sin eventos</p>
+        ) : (
+          <ul className="-mx-5">
+            {eventosDiaSeleccionado.map((ev, idx) => (
+              <li key={ev.id} className={idx > 0 ? "border-t border-separator" : ""}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHojaDiaOpen(false);
+                    abrirDetalle(ev);
+                  }}
+                  className="tap flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+                >
+                  <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${colorPunto(ev.tipo)}`} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="num block text-[15px] font-semibold text-label">{horaRango(ev.inicio, ev.fin)}</span>
+                    <span className="block text-[17px] font-medium text-label">{ev.titulo}</span>
+                    {ev.lugar ? <span className="block text-[15px] text-label-2">{ev.lugar}</span> : null}
+                  </span>
+                  <ChipTipo tipo={ev.tipo} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Hoja>
+
+      <Hoja
+        open={hojaDetalleOpen}
+        onClose={() => {
+          setHojaDetalleOpen(false);
+          setEventoDetalle(null);
+          setConfirmarBorrar(false);
+          setErrorHoja(null);
+        }}
+        title="Detalle del evento"
+        footer={
+          oficial && eventoDetalle ? (
+            confirmarBorrar ? (
+              <div className="space-y-2">
+                <p className="text-[15px] text-label-2">¿Querés borrar este evento? Esta acción no se puede deshacer.</p>
+                <div className="flex gap-2">
+                  <Button variant="danger" className="flex-1" onClick={onBorrar} disabled={guardando}>
+                    {guardando ? "Borrando…" : "Borrar"}
+                  </Button>
+                  <Button variant="secondary" className="flex-1" onClick={() => setConfirmarBorrar(false)} disabled={guardando}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button variant="secondary" className="flex-1" onClick={() => eventoDetalle && abrirEditar(eventoDetalle)}>
+                  <Pencil size={22} strokeWidth={1.75} aria-hidden />
+                  Editar
+                </Button>
+                <Button variant="danger" className="flex-1" onClick={() => setConfirmarBorrar(true)}>
+                  <Trash2 size={22} strokeWidth={1.75} aria-hidden />
+                  Borrar
+                </Button>
+              </div>
+            )
+          ) : undefined
+        }
+      >
+        {eventoDetalle ? (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-[22px] font-bold text-label">{eventoDetalle.titulo}</h3>
+              <div className="mt-2">
+                <ChipTipo tipo={eventoDetalle.tipo} />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Clock size={22} strokeWidth={1.75} className="mt-0.5 shrink-0 text-label-2" aria-hidden />
+                <div>
+                  <p className="text-[17px] text-label">{formatFechaKey(fechaDeEvento(eventoDetalle))}</p>
+                  <p className="num text-[15px] text-label-2">{horaRango(eventoDetalle.inicio, eventoDetalle.fin)}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <MapPin size={22} strokeWidth={1.75} className="mt-0.5 shrink-0 text-label-2" aria-hidden />
+                <p className="text-[17px] text-label">{eventoDetalle.lugar || "Sin lugar"}</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <CalendarDays size={22} strokeWidth={1.75} className="mt-0.5 shrink-0 text-label-2" aria-hidden />
+                <p className="text-[17px] text-label">{eventoDetalle.descripcion || "Sin descripción"}</p>
+              </div>
+            </div>
+            {errorHoja ? <p role="alert" className="text-[15px] font-semibold text-red">{errorHoja}</p> : null}
+          </div>
+        ) : null}
+      </Hoja>
+
+      <Hoja
+        open={hojaFormOpen}
+        onClose={cerrarHojas}
+        title={editando ? "Editar evento" : "Nuevo evento"}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={cerrarHojas} disabled={guardando}>
+              Cancelar
+            </Button>
+            <Button className="flex-1" type="submit" form="form-evento" disabled={guardando}>
+              {guardando ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
+        }
+      >
+        <form id="form-evento" onSubmit={onGuardar} className="space-y-4">
+          {errorHoja ? <p role="alert" className="text-[15px] font-semibold text-red">{errorHoja}</p> : null}
+          <Input
+            label="Título"
+            value={formulario.titulo}
+            onChange={(e) => setFormulario({ ...formulario, titulo: e.target.value })}
+            maxLength={120}
+            required
+            disabled={guardando}
+          />
+          <Select
+            label="Tipo"
+            value={formulario.tipo}
+            onChange={(e) => setFormulario({ ...formulario, tipo: e.target.value as TipoEvento })}
+            disabled={guardando}
+          >
             {TIPOS_EVENTO.map((t) => (
               <option key={t} value={t}>
                 {ETIQUETAS_TIPO[t]}
               </option>
             ))}
           </Select>
-        </div>
-      </DashboardCard>
-
-      <div className="hidden lg:block">
-        <DashboardCard>
-          <div className="space-y-4">
-            <header className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" className="h-11 w-11 p-0" onClick={mesAnterior} aria-label="Mes anterior">
-                  <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <h3 className="heading-display text-xl text-ink">
-                  {new Date(Date.UTC(anio, mes, 1)).toLocaleString("es-AR", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </h3>
-                <Button variant="ghost" size="sm" className="h-11 w-11 p-0" onClick={mesSiguiente} aria-label="Mes siguiente">
-                  <ChevronRight className="h-5 w-5" />
-                </Button>
-              </div>
-              <Button variant="secondary" size="sm" onClick={irAHoy}>
-                <Clock className="h-4 w-4 mr-2" />
-                Hoy
-              </Button>
-            </header>
-
-            <div className="grid grid-cols-7 gap-0.5 text-center font-mono text-[13px] uppercase tracking-wider text-ink-muted">
-              {DIAS.map((d) => (
-                <div key={d} className="py-2">{d}</div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-0.5">
-              {semanas.flatMap((semana, sIdx) =>
-                semana.map((diaKey, dIdx) => {
-                  const evs = eventosPorDia.get(diaKey) ?? [];
-                  const dia = new Date(diaKey + "T00:00:00");
-                  const esHoyDia = diaKey === hoy;
-                  const esMes = dia.getMonth() === mes && dia.getFullYear() === anio;
-                  return (
-                    <div
-                      key={`${sIdx}-${dIdx}`}
-                      className={`relative min-h-[100px] p-2 transition-colors ${
-                        esMes ? "bg-surface" : "bg-bg-subtle/50"
-                      } ${esHoyDia ? "ring-2 ring-alarm" : ""} border border-line-subtle`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span
-                          className={`font-mono text-[13px] font-bold ${
-                            esHoyDia ? "text-alarm" : esMes ? "text-ink" : "text-ink-secondary"
-                          }`}
-                        >
-                          {dia.getDate()}
-                        </span>
-                        {esHoyDia && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-alarm/40 bg-alarm/10 px-1.5 py-0.5 font-mono text-[13px] font-bold text-alarm">
-                            <span className="h-1.5 w-1.5 rounded-full bg-alarm" aria-hidden />
-                            Hoy
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-1 max-h-[70px] overflow-y-auto pr-1">
-                        {evs.slice(0, 3).map((ev) => {
-                          const Icono = getIcon(ICONOS_TIPO[ev.tipo]);
-                          return (
-                            <button
-                              key={ev.id}
-                              className={`w-full text-left rounded px-1.5 py-1 text-[13px] leading-snug ${obtenerFondoTipo(ev.tipo)} ${obtenerColorTipo(ev.tipo)}`}
-                              onClick={() => abrirDetalle(ev)}
-                            >
-                              <div className="flex items-center gap-1">
-                                <Icono className="h-3 w-3 shrink-0" aria-hidden />
-                                <span className="font-medium truncate">{ev.titulo}</span>
-                              </div>
-                              <div className="font-mono text-[13px] font-semibold text-ink-secondary">
-                                {formatearHoraEvento(ev.inicio)}
-                              </div>
-                            </button>
-                          );
-                        })}
-                        {evs.length > 3 && (
-                          <button
-                            className="w-full text-[13px] text-ink-muted hover:text-ink px-1.5 py-0.5"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              abrirDetalle(evs[0]);
-                            }}
-                          >
-                            +{evs.length - 3} más
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </DashboardCard>
-      </div>
-
-      <div className="lg:hidden">
-        <DashboardCard>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="h-11 w-11 p-0" onClick={mesAnterior} aria-label="Mes anterior">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <h3 className="heading-display text-lg text-ink">
-                {new Date(Date.UTC(anio, mes, 1)).toLocaleString("es-AR", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h3>
-              <Button variant="ghost" size="sm" className="h-11 w-11 p-0" onClick={mesSiguiente} aria-label="Mes siguiente">
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select
-                aria-label="Filtrar eventos por tipo"
-                value={filtroTipo}
-                onChange={(e) => setFiltroTipo(e.target.value)}
-                className="w-40"
-              >
-                <option value="todos">Todos</option>
-                {TIPOS_EVENTO.map((t) => (
-                  <option key={t} value={t}>
-                    {ETIQUETAS_TIPO[t]}
-                  </option>
-                ))}
-              </Select>
-              <Button variant="secondary" size="sm" onClick={irAHoy}>
-                <Clock className="h-4 w-4 mr-1" />
-                Hoy
-              </Button>
-            </div>
-          </div>
-
-          {filtrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
-              <Lucide.Calendar className="h-8 w-8" aria-hidden />
-              <p className="text-[14px]">No hay eventos en este mes.</p>
-            </div>
-          ) : (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-              {Array.from(
-                new Set(filtrados.map((e) => fechaDeEvento(e)))
-              )
-                .sort()
-                .map((fechaKey) => {
-                  const evs = filtrados.filter((e) => fechaDeEvento(e) === fechaKey);
-                  const fecha = new Date(fechaKey + "T00:00:00");
-                  const esHoyDia = fechaKey === hoy;
-                  return (
-                    <div key={fechaKey} className="space-y-2">
-                      <div className="flex items-center gap-3 rounded-lg border border-line-subtle bg-bg-subtle px-3 py-2">
-                        <div className={`flex flex-col items-center min-w-[56px] ${esHoyDia ? "bg-alarm/10 border border-alarm/40 rounded-xl p-2" : ""}`}>
-                          <span className={`font-mono text-lg font-bold ${esHoyDia ? "text-alarm" : "text-ink"}`}>
-                            {fecha.getDate()}
-                          </span>
-                          <span className={`font-mono text-[13px] uppercase tracking-wider ${esHoyDia ? "text-alarm" : "text-ink-muted"}`}>
-                            {new Date(fecha).toLocaleString("es-AR", { month: "short" })}
-                          </span>
-                          {esHoyDia && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-alarm/40 bg-alarm/10 px-1.5 py-0.5 font-mono text-[13px] font-bold text-alarm">
-                              <span className="h-1.5 w-1.5 rounded-full bg-alarm" aria-hidden />
-                              Hoy
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <p className="heading-display text-base text-ink">
-                            {formatFechaKey(fechaKey)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 ml-14">
-                        {evs.map((ev) => {
-                          const Icono = getIcon(ICONOS_TIPO[ev.tipo]);
-                          return (
-                            <button
-                              key={ev.id}
-                              className={`w-full text-left rounded-xl border p-3 transition-colors hover:bg-surface-hover ${obtenerFondoTipo(ev.tipo)} ${obtenerColorTipo(ev.tipo)}`}
-                              onClick={() => abrirDetalle(ev)}
-                            >
-                              <div className="flex items-start gap-3">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line-subtle bg-bg-subtle">
-                                  <Icono className="h-4 w-4" aria-hidden />
-                                </span>
-                                <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-semibold text-ink truncate">{ev.titulo}</p>
-                                  <span className="font-mono text-[13px] uppercase tracking-wider text-ink-muted shrink-0">
-                                    {ETIQUETAS_TIPO[ev.tipo]}
-                                  </span>
-                                </div>
-                                <p className="mt-1 font-mono text-[13px] text-ink-muted">
-                                  {formatearHoraEvento(ev.inicio)} - {formatearHoraEvento(ev.fin)}
-                                </p>
-                                {ev.lugar && (
-                                  <p className="mt-1 text-[13px] text-ink-muted truncate">{ev.lugar}</p>
-                                )}
-                              </div>
-                              {oficial && (
-                                <Button variant="ghost" size="sm" className="h-10 w-10 p-0" onClick={(e) => { e.stopPropagation(); abrirEditar(ev); }} aria-label="Editar">
-                                  <Lucide.Edit2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </DashboardCard>
-      </div>
-
-      {oficial && (
-        <QuickAction
-          icono={Plus}
-          titulo="Nuevo evento"
-          descripcion="Crear capacitación, reunión, simulacro, acto u otra actividad."
-          onClick={abrirCrear}
-          className="lg:hidden"
-        />
-      )}
-
-      <Hoja
-        open={hojaOpen}
-        onClose={cerrarHoja}
-        title={hojaModo === "crear" ? "Nuevo evento" : hojaModo === "editar" ? "Editar evento" : hojaEvento?.titulo ?? "Detalle"}
-        className="max-w-lg"
-      >
-        <form onSubmit={onGuardar} className="space-y-4">
-          {errorHoja && (
-            <Aviso variante="error">{errorHoja}</Aviso>
-          )}
-
-          <div className="space-y-2">
-            <label htmlFor="titulo" className="text-[14px] font-semibold text-ink">
-              Título *
-            </label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
-              id="titulo"
-              value={formulario.titulo}
-              onChange={(e) => setFormulario({ ...formulario, titulo: e.target.value })}
-              placeholder="Título del evento"
-              maxLength={120}
+              label="Inicio"
+              type="datetime-local"
+              value={formulario.inicio}
+              onChange={(e) => setFormulario({ ...formulario, inicio: e.target.value })}
               required
-              disabled={guardando || eliminando}
+              disabled={guardando}
             />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="descripcion" className="text-[14px] font-semibold text-ink">
-              Descripción
-            </label>
-            <Textarea
-              id="descripcion"
-              value={formulario.descripcion}
-              onChange={(e) => setFormulario({ ...formulario, descripcion: e.target.value })}
-              placeholder="Detalles, temario, observaciones..."
-              maxLength={2000}
-              rows={3}
-              disabled={guardando || eliminando}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="tipo" className="text-[14px] font-semibold text-ink">
-              Tipo *
-            </label>
-            <Select id="tipo" value={formulario.tipo} onChange={(e) => setFormulario({ ...formulario, tipo: e.target.value as TipoEvento })}>
-              {TIPOS_EVENTO.map((t) => (
-                <option key={t} value={t}>
-                  {ETIQUETAS_TIPO[t]}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <label htmlFor="inicio" className="text-[14px] font-semibold text-ink">
-                Inicio *
-              </label>
-              <Input
-                id="inicio"
-                type="datetime-local"
-                value={formulario.inicio}
-                onChange={(e) => setFormulario({ ...formulario, inicio: e.target.value })}
-                required
-                disabled={guardando || eliminando}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="fin" className="text-[14px] font-semibold text-ink">
-                Fin *
-              </label>
-              <Input
-                id="fin"
-                type="datetime-local"
-                value={formulario.fin}
-                onChange={(e) => setFormulario({ ...formulario, fin: e.target.value })}
-                required
-                disabled={guardando || eliminando}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="lugar" className="text-[14px] font-semibold text-ink">
-              Lugar
-            </label>
             <Input
-              id="lugar"
-              value={formulario.lugar}
-              onChange={(e) => setFormulario({ ...formulario, lugar: e.target.value })}
-              placeholder="Cuartel, salón, dirección..."
-              maxLength={200}
-              disabled={guardando || eliminando}
+              label="Fin"
+              type="datetime-local"
+              value={formulario.fin}
+              onChange={(e) => setFormulario({ ...formulario, fin: e.target.value })}
+              required
+              disabled={guardando}
             />
           </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-line">
-            {hojaModo === "editar" && hojaEvento && !eliminando && (
-              <Button
-                type="button"
-                variant="secondary"
-                className="flex-1 border-fire bg-transparent text-fire-text hover:bg-fire-light"
-                onClick={() => {
-                  if (errorHoja?.includes("Confirmá")) {
-                    onBorrar();
-                  } else {
-                    setErrorHoja("Confirmá borrando de nuevo.");
-                  }
-                }}
-                disabled={guardando}
-              >
-                {eliminando ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Borrando...
-                  </>
-                ) : errorHoja?.includes("Confirmá") ? (
-                  "Confirmar borrado"
-                ) : (
-                  "Borrar evento"
-                )}
-              </Button>
-            )}
-            <Button type="submit" className="flex-1" disabled={guardando}>
-              {guardando ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Guardando...
-                </>
-              ) : hojaModo === "editar" ? (
-                "Guardar cambios"
-              ) : (
-                "Crear evento"
-              )}
-            </Button>
-            <Button type="button" variant="secondary" className="flex-1" onClick={cerrarHoja} disabled={guardando || eliminando}>
-              Cancelar
-            </Button>
-          </div>
+          <Input
+            label="Lugar"
+            value={formulario.lugar}
+            onChange={(e) => setFormulario({ ...formulario, lugar: e.target.value })}
+            maxLength={200}
+            disabled={guardando}
+          />
+          <Textarea
+            label="Descripción"
+            value={formulario.descripcion}
+            onChange={(e) => setFormulario({ ...formulario, descripcion: e.target.value })}
+            maxLength={2000}
+            rows={4}
+            disabled={guardando}
+          />
         </form>
       </Hoja>
-    </div>
+    </>
   );
 }
