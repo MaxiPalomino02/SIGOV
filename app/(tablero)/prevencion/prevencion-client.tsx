@@ -1,32 +1,29 @@
 "use client";
 
-import { useCallback, useMemo, useState, type KeyboardEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import {
-  ArrowRight,
-  ClipboardCheck,
-  FileText,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
   Image as ImageIcon,
   Loader2,
   MessageCircle,
-  Plus,
-  RefreshCw,
-  ShieldCheck,
+  ClipboardCheck,
   Siren,
+  FileText,
+  Plus,
   Trash2,
-  type LucideIcon,
+  X,
 } from "lucide-react";
 import { Aviso } from "@/components/ui/aviso";
 import { Button } from "@/components/ui/button";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Contador } from "@/components/ui/contador";
+import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/page-header";
 import { Pasos } from "@/components/ui/pasos";
-import { QuickAction } from "@/components/ui/quick-action";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { Select } from "@/components/ui/select";
-import { StatusPill } from "@/components/ui/status-pill";
-import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   ETIQUETAS_TIPO_ACTIVIDAD,
@@ -38,7 +35,7 @@ import {
   type TipoActividadPrevencion,
 } from "@/lib/prevencion";
 import type { BomberoOption } from "./actions";
-import { obtenerActividades, registrarActividadAction } from "./actions";
+import { registrarActividadAction } from "./actions";
 
 type Props = {
   inicial: ActividadPrevencion[];
@@ -49,19 +46,44 @@ type Props = {
   hoy: string;
 };
 
-type Mensaje = { tipo: "ok" | "error"; texto: string };
-
 const PASOS_ALTA = [
-  { n: 1, label: "Datos de la actividad" },
+  { n: 1, label: "Actividad" },
   { n: 2, label: "Detalle y fotos" },
 ];
 
-const ICONOS_TIPO: Record<TipoActividadPrevencion, LucideIcon> = {
+const ICONOS_TIPO: Record<TipoActividadPrevencion, typeof MessageCircle> = {
   charla: MessageCircle,
   inspeccion: ClipboardCheck,
   simulacro: Siren,
   otra: FileText,
 };
+
+function mesDeFecha(fecha: string): string {
+  return fecha.slice(0, 7);
+}
+
+function etiquetaMesLarga(mes: string): string {
+  const texto = new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Tucuman",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${mes}-01T12:00:00-03:00`));
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+function moverMes(mes: string, delta: number): string {
+  const [anio, mesNum] = mes.split("-").map(Number);
+  const d = new Date(Date.UTC(anio, mesNum - 1 + delta, 1, 12, 0, 0));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function fechaCorta(fecha: string): string {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Tucuman",
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(`${fecha}T12:00:00-03:00`));
+}
 
 export function PrevencionClient({
   inicial,
@@ -72,213 +94,153 @@ export function PrevencionClient({
   hoy,
 }: Props) {
   const [actividades, setActividades] = useState(inicial);
-  const [errorLista, setErrorLista] = useState<string | null>(cargaError);
-  const [cargandoLista, setCargandoLista] = useState(false);
-  const [filtro, setFiltro] = useState<"todas" | TipoActividadPrevencion>(
-    "todas"
-  );
+  const [mesSeleccionado, setMesSeleccionado] = useState(mesDeFecha(hoy));
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null);
   const [hojaNueva, setHojaNueva] = useState(false);
-  const [mensaje, setMensaje] = useState<Mensaje | null>(null);
+  const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const [fotoGrande, setFotoGrande] = useState<string | null>(null);
 
-  const seleccionado =
-    actividades.find((actividad) => actividad.id === seleccionadoId) ?? null;
+  const seleccionado = actividades.find((a) => a.id === seleccionadoId) ?? null;
+
+  const mesesDisponibles = useMemo(() => {
+    const set = new Set<string>([mesDeFecha(hoy)]);
+    for (const a of actividades) set.add(mesDeFecha(a.fecha));
+    return Array.from(set).sort().reverse();
+  }, [actividades, hoy]);
+
+  const actividadesMes = useMemo(
+    () => actividades.filter((a) => mesDeFecha(a.fecha) === mesSeleccionado),
+    [actividades, mesSeleccionado],
+  );
 
   const conteos = useMemo(() => {
-    const resultado: Record<TipoActividadPrevencion, number> = {
-      charla: 0,
-      inspeccion: 0,
-      simulacro: 0,
-      otra: 0,
-    };
-    for (const actividad of actividades) resultado[actividad.tipo] += 1;
-    return resultado;
-  }, [actividades]);
-
-  const visibles = useMemo(
-    () =>
-      filtro === "todas"
-        ? actividades
-        : actividades.filter((actividad) => actividad.tipo === filtro),
-    [actividades, filtro]
-  );
-
-  const tabs = useMemo(
-    () => [
-      { value: "todas", label: "Todas", badge: actividades.length },
-      ...TIPOS_ACTIVIDAD_PREVENCION.map((tipo) => ({
-        value: tipo.value as string,
-        label: tipo.label,
-        icon: ICONOS_TIPO[tipo.value],
-        badge: conteos[tipo.value],
-      })),
-    ],
-    [actividades.length, conteos]
-  );
-
-  const refrescar = useCallback(async () => {
-    setCargandoLista(true);
-    try {
-      const resultado = await obtenerActividades();
-      if (!resultado.ok) {
-        setErrorLista(resultado.error);
-        return;
-      }
-      setActividades(resultado.data);
-      setErrorLista(null);
-    } catch (err) {
-      console.error("Error inesperado al actualizar prevención:", err);
-      setErrorLista("No se pudieron cargar las actividades.");
-    } finally {
-      setCargandoLista(false);
+    const r = { charla: 0, inspeccion: 0, simulacro: 0 };
+    for (const a of actividadesMes) {
+      if (a.tipo === "charla" || a.tipo === "inspeccion" || a.tipo === "simulacro") r[a.tipo] += 1;
     }
-  }, []);
+    return r;
+  }, [actividadesMes]);
+
+  const gruposPorMes = useMemo(() => {
+    const grupos = new Map<string, ActividadPrevencion[]>();
+    for (const a of actividades) {
+      const mes = mesDeFecha(a.fecha);
+      const lista = grupos.get(mes) ?? [];
+      lista.push(a);
+      grupos.set(mes, lista);
+    }
+    return Array.from(grupos.entries()).sort(([a], [b]) => b.localeCompare(a));
+  }, [actividades]);
 
   const abrirNueva = () => {
     setMensaje(null);
     setHojaNueva(true);
   };
 
-  const alGuardar = async () => {
+  const alGuardar = (actividad: ActividadPrevencion) => {
+    setActividades((prev) => [actividad, ...prev].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado_en.localeCompare(a.creado_en)));
+    setMesSeleccionado(mesDeFecha(actividad.fecha));
     setHojaNueva(false);
     setMensaje({ tipo: "ok", texto: "Actividad registrada." });
-    await refrescar();
   };
 
-  const descripcionLista =
-    actividades.length === 0
-      ? "Todavía no hay actividades registradas."
-      : filtro === "todas"
-        ? `${actividades.length} ${actividades.length === 1 ? "actividad registrada" : "actividades registradas"}.`
-        : `${visibles.length} de ${actividades.length} actividades.`;
-
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:py-8">
-      <SectionHeading
+    <div className="pb-10">
+      <PageHeader
         titulo="Prevención"
-        descripcion="Registrá charlas, inspecciones y simulacros del cuartel."
-        accion={
-          <QuickAction
-            icono={Plus}
-            titulo="Nueva actividad"
-            descripcion="Cargala en dos pasos."
-            onClick={abrirNueva}
-          />
+        subtitulo="Charlas, inspecciones y simulacros del cuartel."
+        acciones={
+          <Button onClick={abrirNueva} className="gap-2" aria-label="Cargar actividad">
+            <Plus size={22} strokeWidth={1.75} aria-hidden />
+            <span className="hidden sm:inline">Nueva</span>
+          </Button>
         }
       />
 
-      {mensaje ? (
-        <div className="mt-4">
-          <Aviso variante={mensaje.tipo}>{mensaje.texto}</Aviso>
-        </div>
-      ) : null}
-
-      {bomberosError ? (
-        <div className="mt-4">
+      <main className="mx-auto w-full max-w-[1100px] space-y-5 px-4 pt-5 lg:px-8">
+        {mensaje ? <Aviso variante={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
+        {cargaError ? <Aviso variante="error">{cargaError}</Aviso> : null}
+        {bomberosError ? (
           <Aviso variante="alerta" titulo="No se pudo cargar el padrón">
             {bomberosError} Podés guardar la actividad sin responsable.
           </Aviso>
-        </div>
-      ) : null}
+        ) : null}
 
-      <div className="mt-5 space-y-4">
-        <div className="flex justify-end">
-          <Button
-            variant="secondary"
-            onClick={refrescar}
-            disabled={cargandoLista}
-            className="gap-2"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${cargandoLista ? "animate-spin" : ""}`}
-              aria-hidden
-            />
-            Actualizar
-          </Button>
-        </div>
+        <section className="rounded-[16px] bg-surface p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Conteo del mes</p>
+              <p className="mt-1 text-[17px] font-semibold text-label">{etiquetaMesLarga(mesSeleccionado)}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, -1))} aria-label="Mes anterior" className="flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition active:scale-[.97] active:opacity-85 hover:bg-surface-2">
+                <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, 1))} aria-label="Mes siguiente" className="flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition active:scale-[.97] active:opacity-85 hover:bg-surface-2">
+                <ChevronRight size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Contador valor={conteos.charla} etiqueta="Charlas" icono="MessageCircle" tono="ink" />
+            <Contador valor={conteos.inspeccion} etiqueta="Inspecciones" icono="ClipboardCheck" tono="fire" />
+            <Contador valor={conteos.simulacro} etiqueta="Simulacros" icono="Siren" tono="brass" />
+          </div>
+          {mesesDisponibles.length > 1 ? (
+            <label className="mt-4 block">
+              <span className="sr-only">Elegir mes</span>
+              <select value={mesSeleccionado} onChange={(e) => setMesSeleccionado(e.target.value)} className="h-11 w-full rounded-[14px] bg-surface-2 px-4 text-[15px] text-label outline-none ring-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red">
+                {mesesDisponibles.map((m) => <option key={m} value={m}>{etiquetaMesLarga(m)}</option>)}
+              </select>
+            </label>
+          ) : null}
+        </section>
 
-        <Tabs
-          items={tabs}
-          value={filtro}
-          onChange={(valor) =>
-            setFiltro(valor as "todas" | TipoActividadPrevencion)
-          }
-          ariaLabel="Tipos de actividad"
-        />
+        {actividades.length === 0 ? (
+          <div className="rounded-[16px] bg-surface px-6 py-12 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[16px] bg-surface-2 text-label-2">
+              <ClipboardCheck size={28} strokeWidth={1.75} aria-hidden />
+            </span>
+            <p className="mt-4 text-[17px] font-semibold text-label">Todavía no hay actividades este mes</p>
+            <p className="mt-1 text-[15px] text-label-2">Cargá la primera charla, inspección o simulacro.</p>
+            <Button onClick={abrirNueva} className="mt-5">Cargar una</Button>
+          </div>
+        ) : actividadesMes.length === 0 ? (
+          <div className="rounded-[16px] bg-surface px-6 py-10 text-center">
+            <p className="text-[17px] font-semibold text-label">Todavía no hay actividades este mes</p>
+            <p className="mt-1 text-[15px] text-label-2">Podés cargar una actividad para {etiquetaMesLarga(mesSeleccionado).toLowerCase()}.</p>
+            <Button onClick={abrirNueva} className="mt-5">Cargar una</Button>
+          </div>
+        ) : null}
 
-        <DashboardCard
-          titulo="Actividades"
-          descripcion={descripcionLista}
-          loading={cargandoLista}
-          error={errorLista}
-        >
-          {visibles.length === 0 ? (
-            <EstadoVacio
-              icono="ShieldCheck"
-              titulo={
-                filtro === "todas"
-                  ? "Todavía no hay actividades"
-                  : "No hay actividades de este tipo"
-              }
-              texto={
-                filtro === "todas"
-                  ? "Registrá la primera charla, inspección o simulacro."
-                  : "Probá con otro tipo de actividad."
-              }
-              accion={
-                filtro === "todas"
-                  ? { label: "Nueva actividad", onClick: abrirNueva }
-                  : { label: "Ver todas", onClick: () => setFiltro("todas") }
-              }
-            />
-          ) : (
-            <ul className="space-y-3">
-              {visibles.map((actividad) => (
-                <li key={actividad.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSeleccionadoId(actividad.id)}
-                    className="flex w-full min-h-12 items-start gap-3 rounded-xl border border-line bg-surface p-3 text-left transition-colors hover:border-ink-muted/40 hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft"
-                  >
-                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-bg-subtle text-ink-muted ring-1 ring-line-subtle">
-                      {(() => {
-                        const Icono = ICONOS_TIPO[actividad.tipo];
-                        return <Icono className="h-5 w-5" aria-hidden />;
-                      })()}
+        {gruposPorMes.map(([mes, lista]) => (
+          <Grupo key={mes} titulo={etiquetaMesLarga(mes)}>
+            <ul>
+              {lista.map((actividad) => {
+                const Icono = ICONOS_TIPO[actividad.tipo];
+                return (
+                  <li key={actividad.id} className="fila relative">
+                    <button type="button" onClick={() => setSeleccionadoId(actividad.id)} className="absolute inset-0" aria-label={`Ver ${ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo].toLowerCase()} en ${actividad.lugar}`} />
+                    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-surface-2 text-label-2 pointer-events-none">
+                      <Icono size={22} strokeWidth={1.75} aria-hidden />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="break-words font-semibold text-ink">
-                          {actividad.lugar}
-                        </span>
-                        <StatusPill estado={actividad.tipo} />
-                      </span>
-                      {actividad.descripcion ? (
-                        <span className="mt-1 line-clamp-2 text-[14px] leading-snug text-ink-muted">
-                          {actividad.descripcion}
-                        </span>
+                    <div className="relative z-10 min-w-0 flex-1 py-3 pointer-events-none">
+                      <p className="truncate text-[17px] font-semibold text-label">{ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo]} · {actividad.lugar}</p>
+                      <p className="mt-0.5 truncate text-[15px] text-label-2">{fechaCorta(actividad.fecha)} · {actividad.responsable_nombre ?? "Sin responsable"}</p>
+                    </div>
+                    <div className="relative z-10 flex shrink-0 items-center gap-2 pointer-events-none">
+                      {actividad.fotos.length > 0 ? (
+                        <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[13px] font-medium text-label-2">{actividad.fotos.length} {actividad.fotos.length === 1 ? "foto" : "fotos"}</span>
                       ) : null}
-                      <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-ink-secondary">
-                        <span>{formatearFechaActividad(actividad.fecha)}</span>
-                        <span>
-                          {actividad.responsable_nombre ?? "Sin responsable"}
-                        </span>
-                        <span>
-                          {actividad.participantes || "Sin participantes"}
-                        </span>
-                      </span>
-                    </span>
-                    <ArrowRight
-                      className="mt-2 h-4 w-4 shrink-0 text-ink-muted"
-                      aria-hidden
-                    />
-                  </button>
-                </li>
-              ))}
+                      <ChevronRight size={20} strokeWidth={1.75} className="text-label-3" aria-hidden />
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
-          )}
-        </DashboardCard>
-      </div>
+          </Grupo>
+        ))}
+      </main>
 
       {hojaNueva ? (
         <AltaActividadHoja
@@ -286,6 +248,7 @@ export function PrevencionClient({
           hoy={hoy}
           onCerrar={() => setHojaNueva(false)}
           onGuardado={alGuardar}
+          sessionNombre={sessionNombre}
         />
       ) : null}
 
@@ -294,8 +257,23 @@ export function PrevencionClient({
           actividad={seleccionado}
           sessionNombre={sessionNombre}
           onCerrar={() => setSeleccionadoId(null)}
+          onVerFoto={setFotoGrande}
         />
       ) : null}
+
+      <Hoja open={!!fotoGrande} onClose={() => setFotoGrande(null)} title="Foto">
+        {fotoGrande ? (
+          <div className="space-y-4">
+            <div className="overflow-auto rounded-[16px] bg-surface-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={fotoGrande} alt="Foto de la actividad" className="mx-auto max-h-[70vh] w-auto max-w-full object-contain" />
+            </div>
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={() => setFotoGrande(null)}>Cerrar</Button>
+            </div>
+          </div>
+        ) : null}
+      </Hoja>
     </div>
   );
 }
@@ -305,11 +283,13 @@ function AltaActividadHoja({
   hoy,
   onCerrar,
   onGuardado,
+  sessionNombre,
 }: {
   bomberos: BomberoOption[];
   hoy: string;
   onCerrar: () => void;
-  onGuardado: () => void;
+  onGuardado: (actividad: ActividadPrevencion) => void;
+  sessionNombre: string;
 }) {
   const [paso, setPaso] = useState(1);
   const [tipo, setTipo] = useState<TipoActividadPrevencion>("charla");
@@ -323,9 +303,7 @@ function AltaActividadHoja({
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  const cerrar = () => {
-    if (!guardando) onCerrar();
-  };
+  const cerrar = () => { if (!guardando) onCerrar(); };
 
   const agregarFoto = () => {
     const valor = fotoTexto.trim();
@@ -334,7 +312,7 @@ function AltaActividadHoja({
       return;
     }
     if (fotos.length >= MAX_FOTOS_PREVENCION) {
-      setError(`Se pueden cargar hasta ${MAX_FOTOS_PREVENCION} fotos.`);
+      setError(`Podés cargar hasta ${MAX_FOTOS_PREVENCION} fotos.`);
       return;
     }
     setFotos((actuales) => [...actuales, valor]);
@@ -348,38 +326,22 @@ function AltaActividadHoja({
     agregarFoto();
   };
 
-  const validarPasoUno = (): string | null => {
-    if (!lugar.trim()) return "Ingresá el lugar de la actividad.";
-    if (lugar.trim().length > 200) return "El lugar es demasiado largo.";
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return "Ingresá una fecha válida.";
-    return null;
-  };
-
   const continuar = () => {
-    const problema = validarPasoUno();
-    if (problema) {
-      setError(problema);
-      return;
-    }
+    if (!lugar.trim()) { setError("Ingresá el lugar de la actividad."); return; }
+    if (lugar.trim().length > 200) { setError("El lugar es demasiado largo."); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) { setError("Ingresá una fecha válida."); return; }
     setError(null);
     setPaso(2);
   };
 
   const guardar = async () => {
     if (guardando) return;
-    if (participantes.trim().length > 1000) {
-      setError("Los participantes son demasiados.");
-      return;
-    }
-    if (descripcion.trim().length > 2000) {
-      setError("La descripción es demasiado larga.");
-      return;
-    }
-
+    if (participantes.trim().length > 1000) { setError("Los participantes son demasiados."); return; }
+    if (descripcion.trim().length > 2000) { setError("La descripción es demasiado larga."); return; }
     setGuardando(true);
     setError(null);
     try {
-      const resultado = await registrarActividadAction({
+      const input = {
         tipo,
         fecha,
         lugar: lugar.trim(),
@@ -387,12 +349,24 @@ function AltaActividadHoja({
         participantes: participantes.trim(),
         descripcion: descripcion.trim(),
         fotos,
+      };
+      const resultado = await registrarActividadAction(input);
+      if (!resultado.ok) { setError(resultado.error); return; }
+      const responsable = bomberos.find((b) => b.id === responsableId);
+      onGuardado({
+        id: resultado.data,
+        tipo,
+        fecha,
+        lugar: lugar.trim(),
+        responsable_id: responsableId || null,
+        participantes: participantes.trim(),
+        descripcion: descripcion.trim(),
+        fotos,
+        creado_por: "",
+        creado_en: new Date().toISOString(),
+        responsable_nombre: responsable?.nombre,
+        creador_nombre: sessionNombre,
       });
-      if (!resultado.ok) {
-        setError(resultado.error);
-        return;
-      }
-      onGuardado();
     } catch (err) {
       console.error("Error inesperado al guardar actividad:", err);
       setError("No se pudo guardar la actividad. Revisá tu conexión.");
@@ -408,47 +382,27 @@ function AltaActividadHoja({
       title="Nueva actividad"
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="secondary" onClick={cerrar} disabled={guardando}>
-            Cancelar
-          </Button>
-          {paso === 2 ? (
-            <Button variant="secondary" onClick={() => setPaso(1)} disabled={guardando}>
-              Atrás
-            </Button>
-          ) : null}
+          <Button variant="secondary" onClick={cerrar} disabled={guardando}>Cancelar</Button>
+          {paso === 2 ? <Button variant="secondary" onClick={() => setPaso(1)} disabled={guardando}>Atrás</Button> : null}
           {paso === 1 ? (
-            <Button onClick={continuar} className="gap-2">
-              Continuar
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Button>
+            <Button onClick={continuar} className="gap-2">Continuar <ChevronRight size={18} strokeWidth={1.75} aria-hidden /></Button>
           ) : (
             <Button onClick={guardar} disabled={guardando} className="gap-2">
-              {guardando ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <ShieldCheck className="h-4 w-4" aria-hidden />
-              )}
-              {guardando ? "Guardando..." : "Guardar actividad"}
+              {guardando ? <Loader2 size={18} className="animate-spin" aria-hidden /> : null}
+              {guardando ? "Guardando..." : "Guardar"}
             </Button>
           )}
         </div>
       }
     >
-      <div className="space-y-4">
-        <Pasos
-          pasos={PASOS_ALTA}
-          paso={paso}
-          onIr={(destino) => (destino < paso ? setPaso(destino) : undefined)}
-          ariaLabel="Pasos de la nueva actividad"
-        />
+      <div className="space-y-5">
+        <Pasos pasos={PASOS_ALTA} paso={paso} onIr={(d) => (d < paso ? setPaso(d) : undefined)} ariaLabel="Pasos de nueva actividad" />
 
         {paso === 1 ? (
           <>
             <fieldset>
-              <legend className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-                Tipo de actividad
-              </legend>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <legend className="mb-2 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Tipo</legend>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {TIPOS_ACTIVIDAD_PREVENCION.map((item) => {
                   const Icono = ICONOS_TIPO[item.value];
                   const activo = tipo === item.value;
@@ -458,124 +412,61 @@ function AltaActividadHoja({
                       type="button"
                       aria-pressed={activo}
                       onClick={() => setTipo(item.value)}
-                      className={`flex min-h-16 flex-col items-start justify-center gap-1 rounded-xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft ${
-                        activo
-                          ? "border-fire bg-fire-light text-ink"
-                          : "border-line bg-surface text-ink-muted hover:bg-surface-hover"
-                      }`}
+                      className={`flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-[16px] border p-3 text-center transition active:scale-[.97] active:opacity-85 ${activo ? "border-red bg-red-tint text-label" : "border-separator bg-surface-2 text-label-2"}`}
                     >
-                      <Icono className="h-5 w-5 text-fire-text" aria-hidden />
-                      <span className="text-[14px] font-semibold">
-                        {item.label}
-                      </span>
+                      <Icono size={22} strokeWidth={1.75} className={activo ? "text-red" : "text-label-2"} aria-hidden />
+                      <span className="text-[13px] font-semibold">{item.label}</span>
                     </button>
                   );
                 })}
               </div>
             </fieldset>
-
-            <Input
-              label="Fecha"
-              type="date"
-              value={fecha}
-              onChange={(event) => setFecha(event.target.value)}
-              disabled={guardando}
-            />
-            <Input
-              label="Lugar"
-              placeholder="Ej.: Sala de conferencias"
-              value={lugar}
-              onChange={(event) => setLugar(event.target.value)}
-              maxLength={200}
-              disabled={guardando}
-            />
+            <Input label="Fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} disabled={guardando} />
+            <Input label="Lugar" placeholder="Ej.: Escuela N° 123" value={lugar} onChange={(e) => setLugar(e.target.value)} maxLength={200} disabled={guardando} />
           </>
         ) : (
           <>
-            <Select
-              label="Responsable"
-              hint="Opcional."
-              value={responsableId}
-              onChange={(event) => setResponsableId(event.target.value)}
-              disabled={guardando}
-            >
+            <Select label="Responsable" hint="Opcional." value={responsableId} onChange={(e) => setResponsableId(e.target.value)} disabled={guardando}>
               <option value="">Sin responsable asignado</option>
-              {bomberos.map((bombero) => (
-                <option key={bombero.id} value={bombero.id}>
-                  {bombero.nombre}
-                </option>
-              ))}
+              {bomberos.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
             </Select>
-            <Textarea
-              label="Participantes"
-              placeholder="Nombres o grupos que participaron..."
-              value={participantes}
-              onChange={(event) => setParticipantes(event.target.value)}
-              maxLength={1000}
-              hint="Opcional. Hasta 1000 caracteres."
-              disabled={guardando}
-            />
-            <Textarea
-              label="Descripción"
-              placeholder="De qué se trató la actividad..."
-              value={descripcion}
-              onChange={(event) => setDescripcion(event.target.value)}
-              maxLength={2000}
-              hint="Opcional. Hasta 2000 caracteres."
-              disabled={guardando}
-            />
+            <Textarea label="Participantes" placeholder="Nombres o grupos que participaron..." value={participantes} onChange={(e) => setParticipantes(e.target.value)} maxLength={1000} hint="Opcional. Hasta 1000 caracteres." disabled={guardando} />
+            <Textarea label="Descripción" placeholder="¿De qué se trató la actividad?" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} maxLength={2000} hint="Opcional. Hasta 2000 caracteres." disabled={guardando} />
 
-            <div className="space-y-2">
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-                Fotos
-              </span>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Fotos</p>
+                <p className="mt-1 text-[13px] text-label-2">Opcional. Hasta {MAX_FOTOS_PREVENCION} fotos. Pegá un enlace http(s) o una ruta que empiece con /.</p>
+              </div>
               <div className="flex gap-2">
-                <Input
-                  aria-label="Enlace o ruta de la foto"
-                  placeholder="https://... o /brand/..."
-                  value={fotoTexto}
-                  onChange={(event) => setFotoTexto(event.target.value)}
-                  onKeyDown={onFotoKeyDown}
-                  disabled={guardando}
-                  containerClassName="flex-1"
-                />
-                <Button
-                  variant="secondary"
-                  onClick={agregarFoto}
-                  disabled={guardando}
-                  className="gap-2"
-                >
-                  <ImageIcon className="h-4 w-4" aria-hidden />
-                  Agregar
+                <Input aria-label="Enlace o ruta de la foto" placeholder="https://... o /ruta/..." value={fotoTexto} onChange={(e) => setFotoTexto(e.target.value)} onKeyDown={onFotoKeyDown} disabled={guardando} containerClassName="flex-1" />
+                <Button variant="secondary" onClick={agregarFoto} disabled={guardando || fotos.length >= MAX_FOTOS_PREVENCION} className="gap-2">
+                  <Camera size={18} strokeWidth={1.75} aria-hidden /> Agregar
                 </Button>
               </div>
               {fotos.length > 0 ? (
-                <ul className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {fotos.map((foto, index) => (
-                    <li
-                      key={`${foto}-${index}`}
-                      className="flex items-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-3 py-2 text-[13px] text-ink"
-                    >
-                      <span className="min-w-0 flex-1 break-all">{foto}</span>
+                    <div key={`${foto}-${index}`} className="group relative h-[72px] overflow-hidden rounded-[12px] bg-surface-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={foto} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
                       <button
                         type="button"
-                        onClick={() =>
-                          setFotos((actuales) =>
-                            actuales.filter((_, i) => i !== index)
-                          )
-                        }
+                        onClick={() => setFotos((actuales) => actuales.filter((_, i) => i !== index))}
                         aria-label={`Quitar foto ${index + 1}`}
-                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-surface-hover hover:text-fire-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft"
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 text-label shadow-sm"
                       >
-                        <Trash2 className="h-4 w-4" aria-hidden />
+                        <Trash2 size={14} strokeWidth={1.75} aria-hidden />
                       </button>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : (
-                <p className="text-[13px] text-ink-muted">
-                  Opcional. Hasta {MAX_FOTOS_PREVENCION} enlaces o rutas.
-                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  <div className="flex h-[72px] items-center justify-center rounded-[12px] bg-surface-2 text-label-3">
+                    <ImageIcon size={22} strokeWidth={1.75} aria-hidden />
+                  </div>
+                </div>
               )}
             </div>
           </>
@@ -591,98 +482,53 @@ function FichaActividadHoja({
   actividad,
   sessionNombre,
   onCerrar,
+  onVerFoto,
 }: {
   actividad: ActividadPrevencion;
   sessionNombre: string;
   onCerrar: () => void;
+  onVerFoto: (foto: string) => void;
 }) {
   return (
     <Hoja
       open
       onClose={onCerrar}
-      title={actividad.lugar}
-      footer={
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={onCerrar}>
-            Cerrar
-          </Button>
-        </div>
-      }
+      title={`${ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo]} · ${actividad.lugar}`}
+      footer={<div className="flex justify-end"><Button variant="secondary" onClick={onCerrar}>Cerrar</Button></div>}
     >
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill estado={actividad.tipo} />
-          <span className="font-mono text-[13px] text-ink-muted">
-            {formatearFechaActividad(actividad.fecha)}
-          </span>
-        </div>
+      <div className="space-y-5">
+        <Grupo titulo="Datos">
+          <dl>
+            <div className="fila"><dt className="w-36 shrink-0 text-[15px] text-label-2">Tipo</dt><dd className="min-w-0 flex-1 py-3 text-[15px] text-label">{ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo]}</dd></div>
+            <div className="fila"><dt className="w-36 shrink-0 text-[15px] text-label-2">Fecha</dt><dd className="min-w-0 flex-1 py-3 text-[15px] text-label">{formatearFechaActividad(actividad.fecha)}</dd></div>
+            <div className="fila"><dt className="w-36 shrink-0 text-[15px] text-label-2">Lugar</dt><dd className="min-w-0 flex-1 py-3 text-[15px] text-label">{actividad.lugar}</dd></div>
+            <div className="fila"><dt className="w-36 shrink-0 text-[15px] text-label-2">Responsable</dt><dd className="min-w-0 flex-1 py-3 text-[15px] text-label">{actividad.responsable_nombre ?? "Sin responsable asignado"}</dd></div>
+            <div className="fila"><dt className="w-36 shrink-0 text-[15px] text-label-2">Registrada por</dt><dd className="min-w-0 flex-1 py-3 text-[15px] text-label">{actividad.creador_nombre ?? sessionNombre}</dd></div>
+          </dl>
+        </Grupo>
 
-        <p className="whitespace-pre-wrap text-[16px] leading-relaxed text-ink">
-          {actividad.descripcion || "Sin descripción."}
-        </p>
+        <Grupo titulo="Participantes">
+          <div className="px-4 py-3 text-[15px] text-label whitespace-pre-wrap">{actividad.participantes || "Sin participantes registrados."}</div>
+        </Grupo>
 
-        <dl className="grid gap-3 rounded-xl border border-line-subtle bg-bg-subtle p-3 text-[14px] sm:grid-cols-2">
-          <div>
-            <dt className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-              Lugar
-            </dt>
-            <dd className="mt-0.5 text-ink">{actividad.lugar}</dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-              Responsable
-            </dt>
-            <dd className="mt-0.5 text-ink">
-              {actividad.responsable_nombre ?? "Sin responsable asignado"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-              Participantes
-            </dt>
-            <dd className="mt-0.5 text-ink">
-              {actividad.participantes || "Sin participantes registrados"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-              Registrada por
-            </dt>
-            <dd className="mt-0.5 text-ink">
-              {actividad.creador_nombre ?? sessionNombre}
-            </dd>
-          </div>
-        </dl>
+        <Grupo titulo="Descripción">
+          <div className="px-4 py-3 text-[15px] text-label whitespace-pre-wrap">{actividad.descripcion || "Sin descripción."}</div>
+        </Grupo>
 
-        {actividad.fotos.length > 0 ? (
-          <div className="space-y-2">
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-widest text-ink-muted">
-              Fotos
-            </p>
-            <ul className="space-y-2">
+        <Grupo titulo="Fotos">
+          {actividad.fotos.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2 p-3">
               {actividad.fotos.map((foto, index) => (
-                <li key={`${foto}-${index}`}>
-                  <a
-                    href={foto}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-11 items-center gap-2 break-all text-[14px] text-fire-text underline hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft"
-                  >
-                    <ImageIcon className="h-4 w-4 shrink-0" aria-hidden />
-                    Ver foto {index + 1}
-                  </a>
-                </li>
+                <button key={`${foto}-${index}`} type="button" onClick={() => onVerFoto(foto)} className="aspect-square overflow-hidden rounded-[12px] bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red" aria-label={`Abrir foto ${index + 1}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={foto} alt={`Foto ${index + 1} de la actividad`} className="h-full w-full object-cover" />
+                </button>
               ))}
-            </ul>
-          </div>
-        ) : (
-          <Aviso variante="info">Esta actividad no tiene fotos cargadas.</Aviso>
-        )}
-
-        <p className="text-[13px] text-ink-muted">
-          Tipo: {ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo]} · Registro interno del
-          cuartel.
-        </p>
+            </div>
+          ) : (
+            <div className="px-4 py-4 text-[15px] text-label-2">Esta actividad no tiene fotos cargadas.</div>
+          )}
+        </Grupo>
       </div>
     </Hoja>
   );
