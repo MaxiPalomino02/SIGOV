@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { AccionesReportes } from "@/components/reportes/acciones-reportes";
-import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Contador } from "@/components/ui/contador";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
@@ -113,10 +112,12 @@ export default async function ReportesPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader
+      <AccionesReportes
         titulo="Reportes"
-        subtitulo={`Indicadores del cuartel para ${etiquetaRango(rango)}.`}
-        acciones={<div className="no-print"><AccionesReportes desde={rango.desde} hasta={rango.hasta} /></div>}
+        subtitulo="Indicadores del cuartel."
+        estado={etiquetaRango(rango)}
+        desde={rango.desde}
+        hasta={rango.hasta}
       />
 
       <div className="no-print mx-auto w-full max-w-3xl space-y-5 px-4 py-5 lg:max-w-5xl">

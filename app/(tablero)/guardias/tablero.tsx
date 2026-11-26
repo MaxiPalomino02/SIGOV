@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { CUARTEL } from "@/lib/cuartel.config";
-import { ChevronRight, CircleHelp, Printer } from "lucide-react";
+import { CalendarDays, ChevronRight, CircleHelp, Printer } from "lucide-react";
 import { Badge, isCargo } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Segmentado } from "@/components/ui/segmentado";
 import type { SessionBombero } from "@/lib/auth";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
@@ -653,29 +653,25 @@ export function Tablero({
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo="Guardias"
-        acciones={
-          <>
-            <button
-              type="button"
-              onClick={() => setAyudaAbierta(true)}
-              aria-label="Ayuda sobre guardias"
-              className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-surface-2 text-label-2 transition-colors hover:bg-red-tint hover:text-red"
-            >
-              <CircleHelp size={22} strokeWidth={1.75} aria-hidden />
-            </button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setMenuImpresion(true)}
-              className="h-11 px-3 text-[13px] sm:px-4 sm:text-[15px]"
-            >
-              <Printer size={22} strokeWidth={1.75} aria-hidden />
-              Imprimir planilla A4
-            </Button>
-          </>
-        }
+        icono={CalendarDays}
+        estado={{
+          tono: actual && personasActuales.length > 0 ? "turno" : "neutro",
+          texto:
+            actual && personasActuales.length > 0
+              ? `En servicio ahora, ${rangoFranja(actual.franja)}`
+              : "Sin personal anotado",
+        }}
+        acciones={[
+          { icono: CircleHelp, etiqueta: "Ayuda sobre guardias", onClick: () => setAyudaAbierta(true) },
+          {
+            icono: Printer,
+            etiqueta: "Imprimir planilla A4",
+            onClick: () => setMenuImpresion(true),
+            principal: true,
+          },
+        ]}
       />
 
       <div className="no-print mx-auto w-full max-w-[1100px] px-4 pb-8 pt-4">

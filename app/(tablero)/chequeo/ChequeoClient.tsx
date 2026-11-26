@@ -26,10 +26,10 @@ import {
 } from "lucide-react";
 import * as Lucide from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Hoja } from "@/components/ui/hoja";
 import { DashboardCard } from "@/components/ui/dashboard-card";
 import { StatusPill } from "@/components/ui/status-pill";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { QuickAction } from "@/components/ui/quick-action";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -459,19 +459,31 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
   };
 
   const hoy = hoyArgentina();
+  const plantillaEnCurso = plantillas.find((p) => p.id === plantillaSeleccionada);
+  const estadoIsla = chequeoId && plantillaEnCurso
+    ? ({ tono: "turno", texto: `${ETIQUETAS_TIPO[plantillaEnCurso.tipo]}, ${resultados.size} de ${items.length}` } as const)
+    : ({ tono: "neutro", texto: "Sin chequeo en curso" } as const);
+  const accionesIsla = [
+    { icono: FileText, etiqueta: "Historial", onClick: () => setActiveTab("historial") },
+    ...(oficial && activeTab === "plantillas"
+      ? [{ icono: Plus, etiqueta: "Nueva plantilla", onClick: abrirCrearPlantilla }]
+      : []),
+    ...(activeTab === "ejecutar" && plantillaSeleccionada
+      ? [{ icono: Plus, etiqueta: "Nuevo item", onClick: abrirCrearItem }]
+      : []),
+    ...(activeTab === "ejecutar" && chequeoId
+      ? [{ icono: CheckCircle2, etiqueta: "Finalizar chequeo", onClick: handleFinalizar, principal: true }]
+      : []),
+  ];
 
   return (
     <div className="space-y-4">
-      <SectionHeading
-        titulo="Chequeo de unidades"
-        descripcion="Gestión de plantillas, ejecución de chequeos y revisión de resultados."
-        accion={
-          oficial && activeTab === "plantillas" ? (
-            <QuickAction icono={Plus} titulo="Nueva plantilla" onClick={abrirCrearPlantilla} />
-          ) : activeTab === "ejecutar" && plantillaSeleccionada ? (
-            <QuickAction icono={Plus} titulo="Nuevo item" onClick={abrirCrearItem} />
-          ) : null
-        }
+      <EncabezadoIsla
+        titulo="Chequeo"
+        subtitulo="Gestión de plantillas, ejecución de chequeos y revisión de resultados."
+        icono={ClipboardList}
+        estado={estadoIsla}
+        acciones={accionesIsla}
       />
 
       {/* Tabs navigation */}

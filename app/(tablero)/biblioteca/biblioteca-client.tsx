@@ -9,7 +9,7 @@ import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Segmentado } from "@/components/ui/segmentado";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -111,7 +111,21 @@ export function BibliotecaClient({ inicial, cargaError, sessionId, sessionNombre
 
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader titulo="Biblioteca" subtitulo="Manuales, protocolos, formularios y capacitación del cuartel." acciones={<Button onClick={() => { setMensaje(null); setHojaSubir(true); }} className="gap-2"><Upload size={22} strokeWidth={1.75} aria-hidden /><span className="hidden sm:inline">Subir</span></Button>} />
+      <EncabezadoIsla
+        titulo="Biblioteca"
+        subtitulo="Manuales, protocolos, formularios y capacitación del cuartel."
+        icono={FileText}
+        estado={{
+          tono: "neutro",
+          texto: `${documentos.length} ${documentos.length === 1 ? "documento" : "documentos"}`,
+        }}
+        acciones={[{
+          icono: Upload,
+          etiqueta: "Subir",
+          onClick: () => { setMensaje(null); setHojaSubir(true); },
+          principal: true,
+        }]}
+      />
       <div className="mx-auto w-full max-w-3xl px-4 py-5">
         {mensaje ? <div role={mensaje.tipo === "error" ? "alert" : "status"} className={`mb-4 rounded-[16px] px-4 py-3 text-[15px] ${mensaje.tipo === "ok" ? "bg-green-tint text-green-ink" : mensaje.tipo === "error" ? "bg-red-tint text-red" : "bg-yellow-tint text-yellow-ink"}`}>{mensaje.texto}</div> : null}
         {errorLista ? <div role="alert" className="mb-4 rounded-[16px] bg-red-tint px-4 py-3 text-[15px] text-red">{errorLista}</div> : null}

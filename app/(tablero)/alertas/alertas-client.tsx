@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheckBig, Info, Plus, RefreshCw } from "lucide-react";
+import { CircleCheckBig, Info, Plus, RefreshCw, TriangleAlert } from "lucide-react";
 import { AlertCard, NIVELES_ALERTA, type NivelAlerta, type TipoAlerta } from "@/components/ui/alert-card";
 import { Button } from "@/components/ui/button";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Segmentado } from "@/components/ui/segmentado";
 import { Textarea } from "@/components/ui/textarea";
 import { actualizarAlertasAhora, crearAlertaManual, cerrarAlerta } from "./actions";
@@ -148,6 +148,15 @@ export function AlertasClient({
 
   const vigentes = useMemo(() => alertasIniciales.filter((a) => a.estado_calculado === "vigente"), [alertasIniciales]);
 
+  const ordenNiveles: NivelAlerta[] = ["informativa", "amarilla", "naranja", "roja"];
+  const nivelVigente = vigentes.reduce<NivelAlerta | null>(
+    (max, a) => (!max || ordenNiveles.indexOf(a.nivel) > ordenNiveles.indexOf(max) ? a.nivel : max),
+    null
+  );
+  const estadoIsla = vigentes.length === 0
+    ? ({ tono: "ok", texto: "Sin alertas vigentes" } as const)
+    : ({ tono: "alerta", texto: `Alerta ${NIVELES_ALERTA[nivelVigente ?? "amarilla"].label.toLowerCase()} vigente` } as const);
+
   const filtradas = useMemo(() => {
     if (filtro === "historial") return alertasIniciales.filter((a) => a.estado_calculado !== "vigente");
     if (filtro === "meteorologicas") return vigentes.filter((a) => a.tipo_fuente === "meteorologica");
@@ -211,34 +220,22 @@ export function AlertasClient({
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo="Alertas"
+        icono={TriangleAlert}
+        estado={estadoIsla}
         acciones={
-          <>
-            {oficial ? (
-              <button
-                type="button"
-                onClick={onActualizar}
-                disabled={isPending}
-                aria-label="Actualizar ahora"
-                className="tap flex h-11 w-11 items-center justify-center gap-2 rounded-[14px] bg-surface-2 text-label-2 transition-colors hover:bg-surface sm:w-auto sm:px-4"
-              >
-                <RefreshCw size={22} strokeWidth={1.75} className={isPending ? "animate-spin" : ""} aria-hidden />
-                <span className="hidden text-[15px] font-semibold sm:inline">Actualizar ahora</span>
-              </button>
-            ) : null}
-            {oficial ? (
-              <button
-                type="button"
-                onClick={() => { setMsg(null); setHojaCrear(true); }}
-                aria-label="Cargar alerta"
-                className="tap flex h-11 w-11 items-center justify-center gap-2 rounded-[14px] bg-red px-3 text-surface transition-colors hover:bg-red-pressed sm:w-auto"
-              >
-                <Plus size={22} strokeWidth={1.75} aria-hidden />
-                <span className="hidden text-[15px] font-semibold sm:inline">Cargar alerta</span>
-              </button>
-            ) : null}
-          </>
+          oficial
+            ? [
+                { icono: RefreshCw, etiqueta: "Actualizar ahora", onClick: onActualizar },
+                {
+                  icono: Plus,
+                  etiqueta: "Cargar alerta",
+                  onClick: () => { setMsg(null); setHojaCrear(true); },
+                  principal: true,
+                },
+              ]
+            : []
         }
       />
 

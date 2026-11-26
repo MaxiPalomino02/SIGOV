@@ -9,7 +9,7 @@ import {
 } from "@/lib/historial";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { formatFechaKey, franjaHora, sumarDias } from "@/lib/tablero";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Button } from "@/components/ui/button";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Grupo } from "@/components/ui/grupo";
@@ -198,20 +198,25 @@ export function Historial({
 
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader
+      <EncabezadoIsla
         titulo="Historial"
         subtitulo="Movimientos de las guardias"
-        acciones={
-          <button
-            type="button"
-            onClick={() => setFechasAbiertas(true)}
-            aria-label="Elegir fechas"
-            className="tap flex h-11 items-center gap-2 rounded-[14px] bg-surface-2 px-3 text-[15px] text-label-2 transition-colors hover:bg-red-tint hover:text-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-          >
-            <CalendarDays size={22} strokeWidth={1.75} aria-hidden />
-            <span className="hidden sm:inline">Fechas</span>
-          </button>
-        }
+        icono={ArrowLeftRight}
+        estado={{
+          tono: "neutro",
+          texto:
+            rango.desde || rango.hasta
+              ? `${rango.desde || "…"} – ${rango.hasta || "…"}`
+              : "Últimos 7 días",
+        }}
+        acciones={[
+          {
+            icono: CalendarDays,
+            etiqueta: "Elegir fechas",
+            onClick: () => setFechasAbiertas(true),
+            principal: true,
+          },
+        ]}
       />
 
       <div className="mx-auto w-full max-w-[1100px] px-4 py-5 lg:px-8">

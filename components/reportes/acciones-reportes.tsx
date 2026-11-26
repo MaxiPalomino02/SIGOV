@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileDown, Printer } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { CalendarRange, FileDown, Printer } from "lucide-react";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 
 type Props = {
+  titulo: string;
+  subtitulo: string;
+  estado: string;
   desde: string;
   hasta: string;
 };
 
-export function AccionesReportes({ desde, hasta }: Props) {
+export function AccionesReportes({ titulo, subtitulo, estado, desde, hasta }: Props) {
   const [accion, setAccion] = useState<"pdf" | "impresion" | null>(null);
   const limpiarRef = useRef<(() => void) | null>(null);
 
@@ -35,25 +38,17 @@ export function AccionesReportes({ desde, hasta }: Props) {
   }
 
   return (
-    <div className="no-print flex flex-wrap items-center gap-2">
-      <Button
-        variant="secondary"
-        onClick={() => imprimir("pdf")}
-        disabled={accion !== null}
-        aria-label="Exportar reporte a PDF"
-      >
-        <FileDown className="h-4 w-4" aria-hidden />
-        Exportar PDF
-      </Button>
-      <Button
-        variant="secondary"
-        onClick={() => imprimir("impresion")}
-        disabled={accion !== null}
-        aria-label="Imprimir reporte"
-      >
-        <Printer className="h-4 w-4" aria-hidden />
-        Imprimir
-      </Button>
+    <>
+      <EncabezadoIsla
+        titulo={titulo}
+        subtitulo={subtitulo}
+        icono={CalendarRange}
+        estado={{ tono: "neutro", texto: estado }}
+        acciones={[
+          { icono: FileDown, etiqueta: "Exportar PDF", onClick: () => imprimir("pdf"), principal: true },
+          { icono: Printer, etiqueta: "Imprimir", onClick: () => imprimir("impresion") },
+        ]}
+      />
       <span aria-live="polite" className="sr-only">
         {accion === "pdf"
           ? "Preparando el PDF del reporte."
@@ -61,6 +56,6 @@ export function AccionesReportes({ desde, hasta }: Props) {
             ? "Preparando la impresión del reporte."
             : ""}
       </span>
-    </div>
+    </>
   );
 }

@@ -8,8 +8,9 @@ import {
   ChevronRight,
   Plus,
   UserX,
+  Users,
 } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Badge, CARGOS, isCargo, type Cargo } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Buscador } from "@/components/ui/buscador";
@@ -149,22 +150,27 @@ export function Admin({ bomberos }: { bomberos: RosterBombero[] }) {
 
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader
+      <EncabezadoIsla
         titulo="Administración"
         subtitulo="Personal y turnos del cuartel"
-        acciones={
-          <button
-            type="button"
-            onClick={() => {
+        icono={Users}
+        estado={{ tono: "ok", texto: `${bomberos.length} bomberos activos` }}
+        acciones={[
+          {
+            icono: Plus,
+            etiqueta: "Agregar bombero",
+            onClick: () => {
               limpiarAvisos();
               setNuevoAbierto(true);
-            }}
-            aria-label="Agregar bombero"
-            className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-          >
-            <Plus size={22} strokeWidth={1.75} aria-hidden />
-          </button>
-        }
+            },
+            principal: true,
+          },
+          {
+            icono: CalendarClock,
+            etiqueta: "Generar turnos",
+            onClick: () => setGenerarAbierto(true),
+          },
+        ]}
       />
 
       <div className="mx-auto w-full max-w-[1100px] px-4 py-5 lg:px-8">

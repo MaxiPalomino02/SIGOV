@@ -1,12 +1,12 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { Check, CheckCircle2, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, CheckCircle2, ListTodo, Lock, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Segmentado } from "@/components/ui/segmentado";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -257,24 +257,12 @@ export function TareasClient({
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo="Tareas"
+        icono={ListTodo}
+        estado={{ tono: pendientes.length > 0 ? "neutro" : "ok", texto: `${pendientes.length} pendientes` }}
         acciones={
-          <>
-            <span className="num rounded-full bg-surface-2 px-3 py-1 text-[13px] text-label-2">
-              {pendientes.length} pendientes
-            </span>
-            {esOficial ? (
-              <button
-                type="button"
-                onClick={abrirCrear}
-                aria-label="Nueva tarea"
-                className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed"
-              >
-                <Plus size={22} strokeWidth={1.75} aria-hidden />
-              </button>
-            ) : null}
-          </>
+          esOficial ? [{ icono: Plus, etiqueta: "Nueva tarea", onClick: abrirCrear, principal: true }] : []
         }
       />
 

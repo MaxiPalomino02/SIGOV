@@ -22,7 +22,7 @@ import {
   cargarEventos,
   formatearHoraEvento,
 } from "@/lib/eventos";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Button } from "@/components/ui/button";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
@@ -383,45 +383,18 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo={nombreMes(anio, mes)}
-        acciones={
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={mesAnterior}
-              aria-label="Mes anterior"
-              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={irAHoy}
-              className="tap min-h-[44px] rounded-[14px] px-3 text-[15px] font-semibold text-red transition-colors hover:bg-red-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              Hoy
-            </button>
-            <button
-              type="button"
-              onClick={mesSiguiente}
-              aria-label="Mes siguiente"
-              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              <ChevronRight size={22} strokeWidth={1.75} aria-hidden />
-            </button>
-            {oficial ? (
-              <button
-                type="button"
-                onClick={() => abrirCrear()}
-                aria-label="Nuevo evento"
-                className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-              >
-                <Plus size={22} strokeWidth={1.75} aria-hidden />
-              </button>
-            ) : null}
-          </div>
-        }
+        icono={CalendarDays}
+        estado={{ tono: "neutro", texto: "Hoy" }}
+        acciones={[
+          { icono: ChevronLeft, etiqueta: "Mes anterior", onClick: mesAnterior },
+          { icono: CalendarDays, etiqueta: "Ir a hoy", onClick: irAHoy },
+          { icono: ChevronRight, etiqueta: "Mes siguiente", onClick: mesSiguiente },
+          ...(oficial
+            ? [{ icono: Plus, etiqueta: "Nuevo evento", onClick: () => abrirCrear(), principal: true }]
+            : []),
+        ]}
       />
 
       <div className="mx-auto w-full max-w-[1100px] space-y-4 px-4 pb-8 pt-4 lg:px-8">

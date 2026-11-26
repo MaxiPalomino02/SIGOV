@@ -18,7 +18,7 @@ import { Contador } from "@/components/ui/contador";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Segmentado } from "@/components/ui/segmentado";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -248,24 +248,14 @@ export function AvisosClient({ inicial, cargaError, activos, sessionId, esOficia
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo="Avisos"
+        icono={Bell}
+        estado={{ tono: "neutro", texto: `${noLeidos} sin leer` }}
         acciones={
-          <>
-            <span className="num rounded-full bg-surface-2 px-3 py-1 text-[13px] text-label-2">
-              {noLeidos} sin leer
-            </span>
-            {esOficial ? (
-              <button
-                type="button"
-                onClick={() => { setMensaje(null); setHojaCrear(true); }}
-                aria-label="Publicar aviso"
-                className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed"
-              >
-                <Plus size={22} strokeWidth={1.75} aria-hidden />
-              </button>
-            ) : null}
-          </>
+          esOficial
+            ? [{ icono: Plus, etiqueta: "Publicar aviso", onClick: () => { setMensaje(null); setHojaCrear(true); }, principal: true }]
+            : []
         }
       />
 

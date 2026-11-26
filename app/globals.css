@@ -23,6 +23,7 @@
   --color-green-tint: #E6F7EC;
   --color-green-ink: #1E7B34;
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-inter), system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), system-ui, sans-serif;
 }
 
 @layer base {
@@ -30,6 +31,9 @@
     color-scheme: light;
     font-family: var(--font-sans);
     font-size: 17px;
+    font-optical-sizing: auto;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
   }
 
   body {
@@ -38,7 +42,24 @@
     font-family: var(--font-sans);
     font-size: 17px;
     line-height: 1.5;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
+  }
+
+  .text-\[22px\],
+  .text-\[34px\],
+  .text-\[44px\] {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  h3,
+  h4 {
+    font-weight: 600;
+  }
+
+  label {
+    font-weight: 500;
   }
 
   *,
@@ -56,6 +77,36 @@
     background-color: var(--color-yellow);
     color: var(--color-label);
   }
+}
+
+.text-\[34px\],
+.text-\[44px\] {
+  letter-spacing: -0.022em;
+}
+
+.text-\[22px\] {
+  letter-spacing: -0.018em;
+}
+
+.text-\[17px\] {
+  letter-spacing: -0.011em;
+}
+
+.text-\[15px\] {
+  letter-spacing: -0.006em;
+}
+
+.text-\[13px\],
+.text-\[12px\] {
+  letter-spacing: 0;
+}
+
+.text-\[13px\].uppercase {
+  letter-spacing: .3px;
+}
+
+.font-mono {
+  font-family: var(--font-sans);
 }
 
 @layer components {
@@ -157,7 +208,7 @@
   .planilla-impresion {
     width: 100%;
     color: #000;
-    font-family: Arial, Helvetica, "Source Sans 3", sans-serif;
+    font-family: var(--font-sans);
   }
 
   .planilla-encabezado {

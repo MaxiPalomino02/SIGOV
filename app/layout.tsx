@@ -11,7 +11,10 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  axes: ["opsz"],
 });
+
+const esProduccion = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
   applicationName: PRODUCTO.nombre,
@@ -36,14 +39,44 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const contenido = (
+    <>
+      <Sincronizador />
+      {children}
+      <BotonInstalarApp />
+    </>
+  );
+
   return (
     <html lang="es" className={`${inter.variable} h-full antialiased`}>
+      <head>
+        {!esProduccion ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function (registraciones) {
+                    if (registraciones.length === 0) return;
+                    Promise.all(
+                      registraciones.map(function (registracion) {
+                        return registracion.unregister();
+                      })
+                    ).then(function () {
+                      location.reload();
+                    });
+                  });
+                }
+              `,
+            }}
+          />
+        ) : null}
+      </head>
       <body className="min-h-full flex flex-col bg-bg text-label">
-        <SerwistProvider swUrl="/serwist/sw.js">
-          <Sincronizador />
-          {children}
-          <BotonInstalarApp />
-        </SerwistProvider>
+        {esProduccion ? (
+          <SerwistProvider swUrl="/serwist/sw.js">{contenido}</SerwistProvider>
+        ) : (
+          contenido
+        )}
       </body>
     </html>
   );

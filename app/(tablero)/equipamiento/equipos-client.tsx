@@ -11,7 +11,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Buscador } from "@/components/ui/buscador";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
@@ -247,22 +247,19 @@ export function EquiposClient({ oficial }: Props) {
 
   const fichaActual = ficha ? equipos.find((e) => e.id === ficha.id) ?? ficha : null;
   const IconoFicha = fichaActual ? iconoCategoria(fichaActual.categoria) : Package;
+  const enReparacion = equipos.filter((e) => e.estado === "en_reparacion").length;
+  const estadoIsla = enReparacion > 0
+    ? ({ tono: "alerta", texto: `${enReparacion} en reparación` } as const)
+    : ({ tono: "ok", texto: "0 en reparación" } as const);
 
   return (
     <>
-      <PageHeader
+      <EncabezadoIsla
         titulo="Equipamiento"
+        icono={Wrench}
+        estado={estadoIsla}
         acciones={
-          oficial ? (
-            <button
-              type="button"
-              onClick={abrirCrear}
-              aria-label="Nuevo equipo"
-              className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-            >
-              <Plus size={22} strokeWidth={1.75} aria-hidden />
-            </button>
-          ) : undefined
+          oficial ? [{ icono: Plus, etiqueta: "Nuevo equipo", onClick: abrirCrear, principal: true }] : []
         }
       />
 

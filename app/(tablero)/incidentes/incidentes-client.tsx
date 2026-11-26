@@ -28,6 +28,7 @@ import {
   Waves,
   X,
 } from "lucide-react";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -681,61 +682,36 @@ export function IncidentesClient({
     return Array.from(mapa.entries()).map(([clave, items]) => ({ clave, titulo: etiquetaMes(clave), items }));
   }, [visibles]);
 
-  const progreso = (paso / 4) * 100;
+  const mesActual = claveMes(ahoraInicial);
+  const cargadosEsteMes = cargados.filter((i) => claveMes(i.fecha_hora) === mesActual).length;
+  const esNuevo = vista === "nuevo";
+  const esFicha = vista === "ficha";
+  const tituloIsla = esNuevo ? "Nuevo incidente" : esFicha ? "Incidente" : "Incidentes";
+  const subtituloIsla = esNuevo
+    ? [PASOS_INCIDENTE[paso - 1]?.label, etiquetaGuardado].filter(Boolean).join(" · ")
+    : esFicha
+      ? undefined
+      : "Registrá y consultá las intervenciones del cuartel.";
+  const estadoIsla = esNuevo
+    ? ({ tono: "neutro", texto: `Paso ${paso} de 4` } as const)
+    : ({ tono: "neutro", texto: `${cargadosEsteMes} cargados este mes` } as const);
+  const accionesIsla = esNuevo
+    ? [{ icono: X, etiqueta: "Cerrar", onClick: volverLista, principal: true }]
+    : esFicha
+      ? [{ icono: ArrowLeft, etiqueta: "Volver a la lista", onClick: volverLista }]
+      : [{ icono: Plus, etiqueta: "Nuevo incidente", onClick: nuevoIncidente, principal: true }];
+  const progresoIsla = esNuevo ? { actual: paso, total: 4 } : undefined;
 
   return (
     <div className="min-h-dvh bg-bg pb-28">
-      {vista === "nuevo" ? (
-        <div className="glass sticky top-0 z-30 border-b border-separator">
-          <div className="mx-auto w-full max-w-3xl px-4 py-3">
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={volverLista} aria-label="Volver a la lista" className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2">
-                <ArrowLeft size={22} strokeWidth={1.75} aria-hidden />
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-label-2">Nuevo incidente</p>
-                <p className="truncate text-[17px] font-semibold text-label">Paso {paso} de 4: {PASOS_INCIDENTE[paso - 1]?.label}</p>
-              </div>
-              {etiquetaGuardado ? (
-                <p className="hidden shrink-0 items-center gap-1.5 text-[13px] text-label-2 sm:flex" aria-live="polite">
-                  {estadoGuardado === "guardando" ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Check size={14} strokeWidth={1.75} aria-hidden />}
-                  {etiquetaGuardado}
-                </p>
-              ) : null}
-            </div>
-            <div className="mt-3 h-1 overflow-hidden rounded-full bg-separator" aria-hidden>
-              <div className="h-full rounded-full bg-red transition-[width] duration-200" style={{ width: `${progreso}%` }} />
-            </div>
-            {etiquetaGuardado ? (
-              <p className="mt-2 flex items-center gap-1.5 text-[13px] text-label-2 sm:hidden" aria-live="polite">
-                {estadoGuardado === "guardando" ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" aria-hidden /> : <Check size={14} strokeWidth={1.75} aria-hidden />}
-                {etiquetaGuardado}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      ) : (
-        <div className="glass sticky top-0 z-30 border-b border-separator">
-          <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3">
-            {vista === "ficha" ? (
-              <button type="button" onClick={volverLista} aria-label="Volver a la lista" className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2">
-                <ArrowLeft size={22} strokeWidth={1.75} aria-hidden />
-              </button>
-            ) : null}
-            <div className="min-w-0 flex-1">
-              <h1 className="text-[22px] font-bold text-label">{vista === "ficha" ? "Incidente" : "Incidentes"}</h1>
-              {vista === "lista" ? <p className="text-[15px] text-label-2">Registrá y consultá las intervenciones del cuartel.</p> : null}
-            </div>
-            {vista === "lista" ? (
-              <Button onClick={nuevoIncidente} className="shrink-0 gap-2">
-                <Plus size={22} strokeWidth={1.75} aria-hidden />
-                <span className="hidden sm:inline">Nuevo incidente</span>
-                <span className="sm:hidden">Nuevo</span>
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      )}
+      <EncabezadoIsla
+        titulo={tituloIsla}
+        subtitulo={subtituloIsla}
+        icono={ClipboardList}
+        estado={estadoIsla}
+        acciones={accionesIsla}
+        progreso={progresoIsla}
+      />
 
       <div className="mx-auto w-full max-w-3xl px-4 py-5">
         {mensaje ? (

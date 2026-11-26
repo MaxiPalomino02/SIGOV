@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div aria-hidden className={`animate-pulse rounded-[12px] bg-surface-2 ${className}`} />;
@@ -7,7 +7,7 @@ function Skeleton({ className = "" }: { className?: string }) {
 export default function Loading() {
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader titulo="Reportes" subtitulo="Cargando indicadores del cuartel..." />
+      <EncabezadoIsla titulo="Reportes" subtitulo="Cargando indicadores del cuartel..." />
       <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5 lg:max-w-5xl">
         <section className="rounded-[16px] bg-surface p-4 sm:p-5">
           <Skeleton className="h-5 w-40" />

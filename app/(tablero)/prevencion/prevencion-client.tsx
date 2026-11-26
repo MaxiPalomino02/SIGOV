@@ -22,7 +22,7 @@ import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/page-header";
+import { EncabezadoIsla } from "@/components/encabezado-isla";
 import { Pasos } from "@/components/ui/pasos";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -147,15 +147,15 @@ export function PrevencionClient({
 
   return (
     <div className="min-h-dvh bg-bg pb-24">
-      <PageHeader
+      <EncabezadoIsla
         titulo="Prevención"
         subtitulo="Charlas, inspecciones y simulacros del cuartel."
-        acciones={
-          <Button onClick={abrirNueva} aria-label="Cargar actividad" className="h-11 w-11 p-0 sm:w-auto sm:px-4 sm:gap-2">
-            <Plus size={22} strokeWidth={1.75} aria-hidden />
-            <span className="hidden sm:inline">Nueva</span>
-          </Button>
-        }
+        icono={ClipboardCheck}
+        estado={{
+          tono: "neutro",
+          texto: `${actividadesMes.length} ${actividadesMes.length === 1 ? "actividad" : "actividades"} este mes`,
+        }}
+        acciones={[{ icono: Plus, etiqueta: "Nueva actividad", onClick: abrirNueva, principal: true }]}
       />
 
       <main className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5">
