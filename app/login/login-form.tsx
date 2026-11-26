@@ -1,159 +1,211 @@
 "use client";
 
-import { useActionState, useEffect, useId, useRef, useState } from "react";
-import { CircleX, LoaderCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Hoja } from "@/components/ui/hoja";
+import { useRouter } from "next/navigation";
+import { LoaderCircle } from "lucide-react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type AnimationEvent,
+  type ReactNode,
+} from "react";
 import { login, type LoginState } from "./actions";
-import { RosterList, type RosterBombero } from "./roster-list";
+import { LegajoInput } from "./legajo-input";
+import { WelcomeTransition, type FaseLogin } from "./welcome-transition";
+import styles from "./login.module.css";
 
 const MENSAJE_BLOQUEO = "Demasiados intentos. Probá en unos minutos.";
+const DURACION_SALUDO = 1800;
+const DURACION_SALUDO_REDUCIDO = 1200;
 
-type EventoInstalacion = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
-
-function esIphone(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const iphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const ipadModerno = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return iphone || ipadModerno;
+function vibrar() {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(10);
+  }
 }
 
-export function LoginForm({ bomberos }: { bomberos: RosterBombero[] }) {
-  const [state, action, pending] = useActionState<LoginState, FormData>(login, {
-    error: null,
-  });
+function mensajeVisible(error: string): string {
+  if (error === MENSAJE_BLOQUEO) return error;
+  if (error.startsWith("El servidor") || error.startsWith("Ocurrió un error")) return error;
+  return "Revisá los tres números";
+}
+
+function prefiereMovimientoReducido(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+export function LoginForm({ children }: { children: ReactNode }) {
+  const [state, action, pending] = useActionState<LoginState, FormData>(login, { error: null });
   const [legajo, setLegajo] = useState("");
-  const [instalacionAbierta, setInstalacionAbierta] = useState(false);
-  const [instalable, setInstalable] = useState(false);
-  const [iphone, setIphone] = useState(false);
-  const promptRef = useRef<EventoInstalacion | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [sacudir, setSacudir] = useState(false);
+  const [fase, setFase] = useState<FaseLogin>("idle");
+  const [nombre, setNombre] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const botonRef = useRef<HTMLButtonElement>(null);
+  const navegado = useRef(false);
+  const faseRef = useRef(fase);
+  const pendingRef = useRef(pending);
   const errorId = useId();
-  const listo = /^\d{3}$/.test(legajo);
-  const bloqueado = state.error === MENSAJE_BLOQUEO;
+  const router = useRouter();
+
+  const secuenciaActiva = fase !== "idle" && fase !== "loading";
+  const loginOculto = fase === "dot" || fase === "greeting" || fase === "leaving";
+
+  const irAlInicio = useCallback(() => {
+    if (navegado.current) return;
+    navegado.current = true;
+    router.push("/inicio");
+  }, [router]);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setIphone(esIphone()));
-    const alPedirInstalacion = (evento: Event) => {
-      evento.preventDefault();
-      promptRef.current = evento as EventoInstalacion;
-      setInstalable(true);
-    };
-    const alInstalar = () => {
-      promptRef.current = null;
-      setInstalable(false);
-      setInstalacionAbierta(false);
-    };
-    window.addEventListener("beforeinstallprompt", alPedirInstalacion);
-    window.addEventListener("appinstalled", alInstalar);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("beforeinstallprompt", alPedirInstalacion);
-      window.removeEventListener("appinstalled", alInstalar);
-    };
+    faseRef.current = fase;
+  }, [fase]);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  const enfocarSiEscritorio = useCallback(() => {
+    if (faseRef.current !== "idle" || pendingRef.current) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(pointer: fine)").matches) {
+      inputRef.current?.focus();
+    }
   }, []);
 
-  async function instalar() {
-    if (!promptRef.current) return;
-    await promptRef.current.prompt();
-    const eleccion = await promptRef.current.userChoice;
-    promptRef.current = null;
-    setInstalable(false);
-    if (eleccion.outcome === "accepted") setInstalacionAbierta(false);
+  function alEnfocarInput() {
+    if (typeof window === "undefined" || secuenciaActiva) return;
+    if (!window.matchMedia?.("(pointer: coarse)").matches) return;
+    window.setTimeout(() => {
+      const comportamiento: ScrollBehavior = prefiereMovimientoReducido() ? "auto" : "smooth";
+      botonRef.current?.scrollIntoView({ behavior: comportamiento, block: "end" });
+    }, 250);
+  }
+
+  useEffect(() => {
+    enfocarSiEscritorio();
+  }, [enfocarSiEscritorio]);
+
+  useEffect(() => {
+    if (pending) queueMicrotask(() => setFase("loading"));
+  }, [pending]);
+
+  useEffect(() => {
+    const nombreServidor = state.nombre;
+    if (nombreServidor) {
+      router.prefetch("/inicio");
+      queueMicrotask(() => {
+        setNombre(nombreServidor.trim().split(/\s+/)[0] || "");
+        setFase("collapsing");
+      });
+      return;
+    }
+    if (!state.error) return;
+    const mensaje = mensajeVisible(state.error);
+    queueMicrotask(() => {
+      setError(mensaje);
+      setSacudir(true);
+      setFase("idle");
+    });
+    vibrar();
+    const temporizador = window.setTimeout(() => {
+      setLegajo("");
+      setSacudir(false);
+      enfocarSiEscritorio();
+    }, 420);
+    return () => window.clearTimeout(temporizador);
+  }, [state, router, enfocarSiEscritorio]);
+
+  useEffect(() => {
+    if (fase !== "greeting") return;
+    const espera = prefiereMovimientoReducido()
+      ? DURACION_SALUDO_REDUCIDO
+      : DURACION_SALUDO;
+    const temporizador = window.setTimeout(() => setFase("leaving"), espera);
+    return () => window.clearTimeout(temporizador);
+  }, [fase]);
+
+  useEffect(() => {
+    if (fase !== "leaving") return;
+    const temporizador = window.setTimeout(irAlInicio, prefiereMovimientoReducido() ? 300 : 450);
+    return () => window.clearTimeout(temporizador);
+  }, [fase, irAlInicio]);
+
+  function alTerminarColapso(evento: AnimationEvent<HTMLDivElement>) {
+    if (fase !== "collapsing" || evento.target !== evento.currentTarget) return;
+    setFase(prefiereMovimientoReducido() ? "greeting" : "dot");
+  }
+
+  function alTerminarPunto() {
+    setFase("greeting");
+  }
+
+  function cambiar(valor: string) {
+    if (secuenciaActiva || pending) return;
+    setError(null);
+    setLegajo(valor);
+    if (valor.length === 3) vibrar();
   }
 
   return (
     <>
-      <form action={action} className="mt-6">
-        <label htmlFor="numero_ingreso" className="sr-only">
-          Número de legajo
-        </label>
-        <input
-          id="numero_ingreso"
-          name="numero_ingreso"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete="off"
-          autoFocus
-          value={legajo}
-          maxLength={3}
-          placeholder="000"
-          aria-invalid={state.error ? true : undefined}
-          aria-describedby={state.error ? errorId : undefined}
-          onChange={(evento) => setLegajo(evento.target.value.replace(/\D/g, "").slice(0, 3))}
-          className="num h-16 w-full rounded-[16px] bg-surface px-4 text-center text-[34px] font-bold leading-none text-label placeholder:text-label-2 focus:outline-2 focus:outline-offset-2 focus:outline-red"
-        />
+      <div
+        onAnimationEnd={alTerminarColapso}
+        className={`${styles.contenido} ${fase === "collapsing" ? styles.colapsando : ""} ${
+          loginOculto ? styles.contenidoOculto : ""
+        }`}
+      >
+        {children}
 
-        <div aria-live="polite" aria-atomic="true">
-          {state.error ? (
-            <div
-              id={errorId}
-              role="alert"
-              className="mt-3 flex items-start gap-3 rounded-[16px] bg-red-tint p-4 text-left text-red"
-            >
-              <CircleX size={22} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
-              <p className="text-[15px] font-medium leading-snug">{state.error}</p>
-            </div>
-          ) : null}
-        </div>
-
-        <button
-          type="submit"
-          disabled={pending || !listo || bloqueado}
-          className="tap mt-4 inline-flex h-14 w-full items-center justify-center gap-2 rounded-[14px] bg-red px-6 text-[17px] font-semibold text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red disabled:pointer-events-none disabled:text-label-2 disabled:bg-surface-2"
+        <form
+          action={action}
+          onSubmit={(evento) => {
+            if (legajo.length !== 3 || pending || fase !== "idle") evento.preventDefault();
+          }}
+          className={`${styles.formulario} mt-7 w-full`}
         >
-          {pending ? (
-            <>
-              <LoaderCircle size={22} strokeWidth={1.75} className="animate-spin" aria-hidden />
-              <span>Ingresando al sistema…</span>
-            </>
-          ) : (
-            "Ingresar"
-          )}
-        </button>
-      </form>
+          <LegajoInput
+            valor={legajo}
+            error={error}
+            sacudir={sacudir}
+            errorId={errorId}
+            inputRef={inputRef}
+            onChange={cambiar}
+            onEnfocar={alEnfocarInput}
+            deshabilitado={pending || secuenciaActiva}
+          />
 
-      <div className="mt-5">
-        <RosterList bomberos={bomberos} onSeleccionar={setLegajo} />
+          <button
+            ref={botonRef}
+            type="submit"
+            disabled={legajo.length !== 3 || pending || fase !== "idle"}
+            onClick={vibrar}
+            aria-label="Ingresar"
+            aria-busy={pending || fase === "loading"}
+            className={`${styles.boton} tap mt-5 flex h-[50px] w-full scroll-mb-8 items-center justify-center rounded-[14px] bg-red px-6 text-[17px] font-semibold text-surface shadow-[0_1px_2px_rgba(0,0,0,.04)] transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red disabled:pointer-events-none disabled:bg-surface-2 disabled:text-label-2 disabled:shadow-none`}
+          >
+            {pending || fase === "loading" ? (
+              <LoaderCircle size={22} strokeWidth={1.75} className="animate-spin" aria-hidden />
+            ) : (
+              "Ingresar"
+            )}
+          </button>
+        </form>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setInstalacionAbierta(true)}
-        className="tap mt-4 flex min-h-11 w-full items-center justify-center rounded-[14px] text-[13px] text-label-2 transition-colors hover:text-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-      >
-        Cómo instalar SIGOV
-      </button>
-
-      <Hoja
-        open={instalacionAbierta}
-        onClose={() => setInstalacionAbierta(false)}
-        title="Cómo instalar SIGOV"
-        footer={
-          instalable ? (
-            <Button className="w-full" onClick={() => void instalar()}>
-              Instalar SIGOV
-            </Button>
-          ) : (
-            <Button
-              variant="secondary"
-              className="w-full"
-              onClick={() => setInstalacionAbierta(false)}
-            >
-              Entendido
-            </Button>
-          )
-        }
-      >
-        <p className="text-[17px] leading-relaxed text-label">
-          {iphone
-            ? "Tocá Compartir y después Agregar a pantalla de inicio."
-            : "Abrí el menú del navegador y elegí Instalar app o Agregar a pantalla de inicio."}
-        </p>
-      </Hoja>
+      <WelcomeTransition
+        nombre={nombre}
+        fase={fase}
+        onSaltar={irAlInicio}
+        onFinPunto={alTerminarPunto}
+      />
     </>
   );
 }

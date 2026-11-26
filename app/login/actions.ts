@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createSession, destroySession } from "@/lib/session";
 import { createServiceRoleClient, createSupabaseClient } from "@/lib/supabase";
 
-export type LoginState = { error: string | null };
+export type LoginState = { error: string | null; nombre?: string };
 
 const MAX_INTENTOS = 5;
 const VENTANA_MINUTOS = 10;
@@ -111,7 +111,8 @@ export async function login(
     };
   }
 
-  redirect("/inicio");
+  const nombre = bombero.nombre_completo.trim().split(/\s+/)[0] || "bombero";
+  return { error: null, nombre };
 }
 
 export async function logout() {
