@@ -2,58 +2,59 @@
 
 import { redirect } from "next/navigation";
 import { getSessionActiva } from "@/lib/session-db";
+import { isOficial } from "@/lib/cargos";
 import { createServiceRoleClient } from "@/lib/supabase";
-
-export type SuscripcionResult = { ok: true } | { ok: false; error: string };
-
-const CLAVE_RE = /^[A-Za-z0-9_-]{1,512}={0,2}$/;
-
-function datoInvalido(): SuscripcionResult {
-  return { ok: false, error: "Los datos de la suscripción son inválidos." };
-}
+import { enviarPush } from "@/lib/push";
+import {
+  borrarSuscripcionPush,
+  guardarSuscripcionPush,
+  type SuscripcionResult,
+} from "@/lib/push-suscripcion";
 
 export async function activarSuscripcionPush(datos: unknown): Promise<SuscripcionResult> {
   const session = await getSessionActiva();
   if (!session) redirect("/login");
-  if (!datos || typeof datos !== "object") return datoInvalido();
-
-  const { endpoint, p256dh, auth } = datos as Record<string, unknown>;
-  if (
-    typeof endpoint !== "string" ||
-    !endpoint.startsWith("https://") ||
-    endpoint.length > 2048 ||
-    typeof p256dh !== "string" ||
-    !CLAVE_RE.test(p256dh) ||
-    typeof auth !== "string" ||
-    !CLAVE_RE.test(auth)
-  ) {
-    return datoInvalido();
-  }
-
-  const { error } = await createServiceRoleClient().rpc("push_guardar_suscripcion", {
-    p_bombero_id: session.bombero_id,
-    p_endpoint: endpoint,
-    p_p256dh: p256dh,
-    p_auth: auth,
-  });
-  if (error) {
-    console.error("No pudimos guardar la suscripción push.");
-    return { ok: false, error: "No pudimos guardar la suscripción. Intentá de nuevo." };
-  }
-  return { ok: true };
+  return guardarSuscripcionPush(datos, session);
 }
 
 export async function desactivarSuscripcionPush(): Promise<SuscripcionResult> {
   const session = await getSessionActiva();
   if (!session) redirect("/login");
+  return borrarSuscripcionPush(session);
+}
 
-  const { error } = await createServiceRoleClient().rpc("push_borrar_suscripcion", {
-    p_bombero_id: session.bombero_id,
-    p_endpoint: null,
+export async function enviarNotificacionPrueba(): Promise<SuscripcionResult> {
+  const session = await getSessionActiva();
+  if (!session) redirect("/login");
+  if (!isOficial(session.cargo)) {
+    return { ok: false, error: "No tenés permiso para enviar una prueba." };
+  }
+
+  const registro = await createServiceRoleClient().rpc("push_registrar_envio", {
+    p_referencia: `prueba:${session.bombero_id}`,
+    p_ventana_segundos: 60,
   });
-  if (error) {
-    console.error("No pudimos borrar la suscripción push.");
-    return { ok: false, error: "No pudimos desactivar las notificaciones. Intentá de nuevo." };
+  if (registro.error || registro.data !== true) {
+    return { ok: false, error: "Ya enviamos una prueba hace poco. Esperá un minuto." };
+  }
+
+  const resultado = await enviarPush(
+    { bomberoId: session.bombero_id },
+    {
+      titulo: "Notificación de prueba",
+      cuerpo: "SIGOV. Las notificaciones están funcionando en este dispositivo.",
+      tipo: "aviso",
+      url: "/notificaciones",
+      tag: "sigov-prueba",
+      urgencia: "normal",
+    }
+  );
+
+  if (resultado.enviados === 0) {
+    return {
+      ok: false,
+      error: "No pudimos entregar la prueba. Revisá que las notificaciones estén activadas acá.",
+    };
   }
   return { ok: true };
 }
