@@ -16,35 +16,35 @@ export type AlarmaInfo = {
 export const TIPOS_ALARMA: Record<TipoAlarma, AlarmaInfo> = {
   incendio_estructural: {
     etiqueta: "Incendio estructural",
-    frase: "Atenci?n. Incendio estructural. Incendio estructural. Presentarse en el cuartel.",
+    frase: "Atención. Incendio estructural. Incendio estructural. Presentarse en el cuartel.",
   },
   incendio_forestal: {
     etiqueta: "Incendio forestal",
-    frase: "Atenci?n. Incendio forestal. Incendio forestal. Presentarse en el cuartel.",
+    frase: "Atención. Incendio forestal. Incendio forestal. Presentarse en el cuartel.",
   },
   rescate_vehicular: {
     etiqueta: "Rescate vehicular",
-    frase: "Atenci?n. Rescate vehicular. Rescate vehicular. Presentarse en el cuartel.",
+    frase: "Atención. Rescate vehicular. Rescate vehicular. Presentarse en el cuartel.",
   },
   rescate: {
     etiqueta: "Rescate",
-    frase: "Atenci?n. Rescate. Rescate. Presentarse en el cuartel.",
+    frase: "Atención. Rescate. Rescate. Presentarse en el cuartel.",
   },
   enjambre_abejas: {
     etiqueta: "Enjambre de abejas",
-    frase: "Atenci?n. Enjambre de abejas. Enjambre de abejas. Presentarse en el cuartel.",
+    frase: "Atención. Enjambre de abejas. Enjambre de abejas. Presentarse en el cuartel.",
   },
   inundacion: {
-    etiqueta: "Inundaci?n",
-    frase: "Atenci?n. Inundaci?n. Inundaci?n. Presentarse en el cuartel.",
+    etiqueta: "Inundación",
+    frase: "Atención. Inundación. Inundación. Presentarse en el cuartel.",
   },
   convocatoria_general: {
     etiqueta: "Convocatoria general",
-    frase: "Atenci?n. Convocatoria general. Convocatoria general. Presentarse en el cuartel.",
+    frase: "Atención. Convocatoria general. Convocatoria general. Presentarse en el cuartel.",
   },
   simulacro: {
     etiqueta: "Simulacro",
-    frase: "Atenci?n. Simulacro. Simulacro. Presentarse en el cuartel.",
+    frase: "Atención. Simulacro. Simulacro. Presentarse en el cuartel.",
   },
 };
 
@@ -59,5 +59,5 @@ export function etiquetaAlarma(tipo: string, esSimulacro = false): string {
 }
 
 export function fraseAlarma(tipo: string): string {
-  return TIPOS_ALARMA[tipo as TipoAlarma]?.frase ?? "Atenci?n. Alarma. Presentarse en el cuartel.";
+  return TIPOS_ALARMA[tipo as TipoAlarma]?.frase ?? "Atención. Alarma. Presentarse en el cuartel.";
 }

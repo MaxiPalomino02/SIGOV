@@ -134,7 +134,12 @@ self.addEventListener("push", (event) => {
     badge: "/icons/icon-192.png",
     tag: datos.tag,
     lang: "es",
-    data: { url: datos.url === "/alarma" ? "/alarma" : "/avisos" },
+    data: {
+      url:
+        datos.url === "/alarma" || datos.url === "/notificaciones"
+          ? datos.url
+          : "/avisos",
+    },
     requireInteraction: Boolean(datos.requiereInteraccion),
     vibrate: datos.vibracion,
     renotify: datos.tipo === "alarma",
@@ -149,7 +154,10 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const datos = event.notification.data as { url?: unknown } | null;
-  const destino = datos?.url === "/alarma" ? "/alarma" : "/avisos";
+  const destino =
+    datos?.url === "/alarma" || datos?.url === "/notificaciones"
+      ? datos.url
+      : "/avisos";
 
   event.waitUntil(
     (async () => {
@@ -165,6 +173,32 @@ self.addEventListener("notificationclick", (event) => {
         }
       }
       await self.clients.openWindow(destino);
+    })()
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const cambio = event as PushSubscriptionChangeEvent;
+
+  event.waitUntil(
+    (async () => {
+      const suscripcion = await self.registration.pushManager.getSubscription();
+      if (!suscripcion) return;
+
+      const datos = suscripcion.toJSON();
+      if (!datos.endpoint || !datos.keys?.p256dh || !datos.keys?.auth) return;
+
+      await fetch("/api/push/renovar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          endpoint: datos.endpoint,
+          p256dh: datos.keys.p256dh,
+          auth: datos.keys.auth,
+          endpointAnterior: cambio.oldSubscription?.endpoint ?? null,
+        }),
+      });
     })()
   );
 });

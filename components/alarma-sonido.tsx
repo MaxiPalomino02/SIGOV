@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
+import { hablarTextoAlarma, type EstadoVozAlarma } from "@/lib/voz-alarma";
 
 export const SONIDO_PREF_KEY = "sigov_sonido_alarma";
 
@@ -47,8 +48,15 @@ export async function activarSonidoPorGesto(): Promise<boolean> {
   }
 }
 
+const MENSAJE_VOZ: Record<EstadoVozAlarma, string> = {
+  hablando: "Elegí una voz en español.",
+  cargando: "Buscando una voz en español en este dispositivo.",
+  "sin-soporte": "Este navegador no permite reproducir voces.",
+};
+
 export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }) {
   const [habilitado, setHabilitado] = useState(false);
+  const [estadoVoz, setEstadoVoz] = useState<EstadoVozAlarma | null>(null);
 
   useEffect(() => {
     const sync = () => setHabilitado(getSonidoHabilitado());
@@ -67,6 +75,11 @@ export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }
   const activar = async () => {
     await activarSonidoPorGesto();
     setHabilitado(getSonidoHabilitado());
+  };
+
+  const probarVoz = async () => {
+    await activarSonidoPorGesto();
+    setEstadoVoz(hablarTextoAlarma("Atención. Prueba de voz en español. Presentarse en el cuartel."));
   };
 
   if (compact) {
@@ -88,24 +101,34 @@ export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${
-          habilitado
-            ? "border-green bg-green-tint text-green-ink"
-            : "border-red bg-red-tint text-red"
-        }`}
-      >
-        {habilitado ? <Volume2 className="h-3.5 w-3.5" aria-hidden /> : <VolumeX className="h-3.5 w-3.5" aria-hidden />}
-        Sonido de alarma: {habilitado ? "activado" : "desactivado"}
-      </span>
-      <button
-        type="button"
-        onClick={activar}
-        className="tap inline-flex min-h-11 items-center rounded-[14px] border border-separator bg-surface px-3 text-[13px] font-semibold text-label transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
-      >
-        {habilitado ? "Probar sonido" : "Activar sonido"}
-      </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${
+            habilitado
+              ? "border-green bg-green-tint text-green-ink"
+              : "border-red bg-red-tint text-red"
+          }`}
+        >
+          {habilitado ? <Volume2 className="h-3.5 w-3.5" aria-hidden /> : <VolumeX className="h-3.5 w-3.5" aria-hidden />}
+          Sonido de alarma: {habilitado ? "activado" : "desactivado"}
+        </span>
+        <button
+          type="button"
+          onClick={activar}
+          className="tap inline-flex min-h-11 items-center rounded-[14px] border border-separator bg-surface px-3 text-[13px] font-semibold text-label transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+        >
+          {habilitado ? "Probar sonido" : "Activar sonido"}
+        </button>
+        <button
+          type="button"
+          onClick={probarVoz}
+          className="tap inline-flex min-h-11 items-center rounded-[14px] border border-separator bg-surface px-3 text-[13px] font-semibold text-label transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+        >
+          Probar voz
+        </button>
+      </div>
+      {estadoVoz ? <p className="text-[13px] text-label-2">{MENSAJE_VOZ[estadoVoz]}</p> : null}
     </div>
   );
 }

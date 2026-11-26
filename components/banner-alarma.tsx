@@ -19,7 +19,7 @@ export async function BannerAlarma() {
     const { data } = await supabase
       .from("alarmas")
       .select("id, tipo, detalle, es_simulacro, activada_en")
-      .eq("estado", "activa")
+      .eq("activa", true)
       .order("activada_en", { ascending: false })
       .limit(1);
     const row = (data ?? [])[0] as AlarmaActiva | undefined;

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { fraseAlarma, etiquetaAlarma } from "@/lib/alarma";
+import { cancelarVozPendiente, hablarTextoAlarma } from "@/lib/voz-alarma";
 import { responderAlarma } from "@/app/(tablero)/alarma/actions";
 import {
   activarSonidoPorGesto,
@@ -102,36 +103,11 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
       window.clearInterval(voiceTimerRef.current);
       voiceTimerRef.current = null;
     }
+    cancelarVozPendiente();
     try { window.speechSynthesis?.cancel(); } catch {}
     try { navigator.vibrate?.(0); } catch {}
     try { wakeLockRef.current?.release?.(); } catch {}
     wakeLockRef.current = null;
-  }, []);
-
-  const hablar = useCallback((texto: string) => {
-    try {
-      const synth = window.speechSynthesis;
-      if (!synth) return;
-      synth.cancel();
-      const utter = new SpeechSynthesisUtterance(texto);
-      const voces = synth.getVoices();
-      const es = voces.filter((v) => /^es([-_]|$)/i.test(v.lang));
-      const voz =
-        es.find((v) => /es[-_]AR/i.test(v.lang)) ??
-        es.find((v) => /es[-_]419/i.test(v.lang)) ??
-        es.find((v) => /es[-_]MX/i.test(v.lang)) ??
-        es.find((v) => /es[-_]ES/i.test(v.lang)) ??
-        es[0];
-      if (voz) {
-        utter.voice = voz;
-        utter.lang = voz.lang;
-      } else {
-        utter.lang = "es-ES";
-      }
-      utter.rate = 0.95;
-      utter.volume = 1;
-      synth.speak(utter);
-    } catch {}
   }, []);
 
   const iniciarSirena = useCallback(() => {
@@ -185,8 +161,8 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
     if (habilitado) {
       sirenRef.current = iniciarSirena();
       const frase = fraseAlarma(a.tipo);
-      hablar(frase);
-      voiceTimerRef.current = window.setInterval(() => hablar(frase), 8000);
+      hablarTextoAlarma(frase);
+      voiceTimerRef.current = window.setInterval(() => hablarTextoAlarma(frase), 8000);
     }
     try { navigator.vibrate?.([400, 200, 400, 200, 800]); } catch {}
     try {
@@ -195,7 +171,7 @@ export function AlarmaGlobal({ sessionId }: { sessionId: string }) {
         wakeLockRef.current = await navigator.wakeLock.request("screen");
       }
     } catch {}
-  }, [detenerAlertas, hablar, iniciarSirena]);
+  }, [detenerAlertas, iniciarSirena]);
 
   const consultarAlarma = useCallback(async () => {
     const seq = ++requestSeqRef.current;

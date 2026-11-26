@@ -21,7 +21,7 @@ function configurarVapid(): boolean {
   if (vapidListo) return true;
 
   const subject = process.env.VAPID_SUBJECT;
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
 
   if (!subject || !publicKey || !privateKey) {
@@ -58,7 +58,10 @@ function normalizarPayload(payload: PayloadPush) {
     titulo: payload.titulo.trim().slice(0, 120) || "SIGOV",
     cuerpo: payload.cuerpo.trim().slice(0, 500),
     tipo: payload.tipo,
-    url: payload.url === "/alarma" ? ("/alarma" as const) : ("/avisos" as const),
+    url:
+      payload.url === "/alarma" || payload.url === "/notificaciones"
+        ? payload.url
+        : ("/avisos" as const),
     tag: payload.tag.trim().slice(0, 64) || `sigov-${payload.tipo}`,
     urgencia: payload.urgencia ?? "normal",
     requiereInteraccion: Boolean(payload.requiereInteraccion),
