@@ -8,3 +8,46 @@ export function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuf
   }
   return resultado;
 }
+
+export function soportePush(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+let registroPush: Promise<ServiceWorkerRegistration> | null = null;
+
+export function registrarServiceWorkerPush(): Promise<ServiceWorkerRegistration> {
+  if (!soportePush()) {
+    return Promise.reject(new Error("Este navegador no admite notificaciones push."));
+  }
+
+  if (!registroPush) {
+    registroPush = (async () => {
+      const registro = await navigator.serviceWorker.register("/sw.js", { scope: "/push/" });
+      if (registro.active) return registro;
+
+      const trabajador = registro.installing ?? registro.waiting;
+      if (!trabajador) throw new Error("No pudimos iniciar el service worker push.");
+
+      await new Promise<void>((resolve, reject) => {
+        trabajador.addEventListener("statechange", () => {
+          if (trabajador.state === "activated") resolve();
+          if (trabajador.state === "redundant") {
+            reject(new Error("No pudimos iniciar el service worker push."));
+          }
+        });
+      });
+
+      return registro;
+    })().catch((error: unknown) => {
+      registroPush = null;
+      throw error;
+    });
+  }
+
+  return registroPush;
+}

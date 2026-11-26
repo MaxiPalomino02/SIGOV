@@ -3,24 +3,24 @@ import { PRODUCTO } from "@/lib/marca";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/inicio",
+    id: "/",
     name: PRODUCTO.nombre,
     short_name: PRODUCTO.nombre,
     description: PRODUCTO.nombreCompleto,
-    start_url: "/inicio",
+    start_url: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#F2F2F7",
     theme_color: "#C8102E",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: "/icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/icon-512.png",
+        src: "/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",

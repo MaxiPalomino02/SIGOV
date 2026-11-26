@@ -5,7 +5,11 @@ import { BellRing, CheckCircle2, CircleX, Info, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Grupo } from "@/components/ui/grupo";
 import { Switch } from "@/components/ui/switch";
-import { urlBase64ToUint8Array } from "@/lib/push-client";
+import {
+  registrarServiceWorkerPush,
+  soportePush,
+  urlBase64ToUint8Array,
+} from "@/lib/push-client";
 import {
   activarSuscripcionPush,
   desactivarSuscripcionPush,
@@ -58,11 +62,18 @@ function useNotificaciones({
     obtenerPermiso,
     permisoServidor
   );
+  const soporte = useSyncExternalStore(suscribirPermiso, soportePush, () => true);
   const permiso = permisoLocal ?? permisoStore;
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setIphone(esIphone()));
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" && soportePush()) {
+      void registrarServiceWorkerPush().catch(() => {});
+    }
   }, []);
 
   const cambiarActiva = useCallback(
@@ -77,17 +88,14 @@ function useNotificaciones({
     setMensaje(null);
     setPendiente(true);
     try {
-      if (!claveDisponible) {
-        throw new Error("Falta la configuración push del servidor. Avisá al administrador.");
-      }
-      if (typeof Notification === "undefined") {
-        throw new Error("Este navegador no admite notificaciones.");
-      }
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      if (typeof Notification === "undefined" || !soportePush()) {
         throw new Error("Este navegador no admite notificaciones push.");
       }
       if (process.env.NODE_ENV !== "production") {
         throw new Error("En local probá las notificaciones con npm run build y npm start.");
+      }
+      if (!claveDisponible) {
+        throw new Error("Falta la configuración push del servidor. Avisá al administrador.");
       }
 
       const respuesta = await Notification.requestPermission();
@@ -110,7 +118,7 @@ function useNotificaciones({
       }
       if (!clave) throw new Error("No pudimos obtener la clave pública push.");
 
-      const registro = await navigator.serviceWorker.ready;
+      const registro = await registrarServiceWorkerPush();
       const existente = await registro.pushManager.getSubscription();
       if (existente) await existente.unsubscribe();
 
@@ -156,8 +164,8 @@ function useNotificaciones({
     setPendiente(true);
     try {
       if ("serviceWorker" in navigator) {
-        const registro = await navigator.serviceWorker.ready;
-        const suscripcion = await registro.pushManager.getSubscription();
+        const registro = await navigator.serviceWorker.getRegistration("/push/");
+        const suscripcion = await registro?.pushManager.getSubscription();
         if (suscripcion) await suscripcion.unsubscribe();
       }
 
@@ -193,6 +201,7 @@ function useNotificaciones({
     pendiente,
     mensaje,
     permiso,
+    soporte,
     iphone,
     cambiar,
     activar,
@@ -225,12 +234,32 @@ export function ControlActivarNotificaciones({
   errorInicial,
   onActivaChange,
 }: OpcionesNotificaciones) {
-  const { activa, pendiente, mensaje, permiso, iphone, cambiar } = useNotificaciones({
+  const { activa, pendiente, mensaje, permiso, soporte, iphone, cambiar } = useNotificaciones({
     activaInicial,
     claveDisponible,
     errorInicial,
     onActivaChange,
   });
+
+  const sinSoporte = !soporte;
+  const permisoDenegado = permiso === "denied";
+  const estadoTexto = sinSoporte
+    ? "No soportado"
+    : permisoDenegado
+      ? "Permiso denegado"
+      : activa
+        ? "Activadas"
+        : "Pendiente de activar";
+  const estadoDetalle = sinSoporte
+    ? "Este navegador no admite notificaciones push."
+    : permisoDenegado
+      ? "Habilitá las notificaciones desde Ajustes para este sitio."
+      : activa
+        ? "Este dispositivo recibe los avisos del cuartel."
+        : !claveDisponible
+          ? "Falta la configuración push del servidor. Avisá al administrador."
+          : "Tocá el switch para activarlas.";
+  const IconoEstado = sinSoporte || permisoDenegado ? CircleX : activa ? BellRing : Info;
 
   const permisoTexto =
     permiso === "granted"
@@ -264,8 +293,18 @@ export function ControlActivarNotificaciones({
         onChange={cambiar}
         etiqueta="Activar notificaciones"
         descripcion={pendiente ? "Procesando…" : undefined}
-        disabled={pendiente || permiso === "no-soportado" || !claveDisponible}
+        disabled={sinSoporte || permisoDenegado}
       />
+      <div className="fila flex items-center gap-3 border-t border-separator px-4 py-2">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-label-2">
+          <IconoEstado size={22} strokeWidth={1.75} aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[17px] font-medium text-label">Estado</span>
+          <span className="mt-0.5 block text-[15px] text-label-2">{estadoDetalle}</span>
+        </span>
+        <span className="num shrink-0 text-[15px] text-label-2">{estadoTexto}</span>
+      </div>
       <div className="fila flex items-center gap-3 border-t border-separator px-4 py-2">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center text-label-2">
           <IconoPermiso size={22} strokeWidth={1.75} aria-hidden />
@@ -285,10 +324,18 @@ export function TarjetaActivarNotificaciones({
   activaInicial,
   claveDisponible,
 }: OpcionesNotificaciones) {
-  const { activa, pendiente, mensaje, activar } = useNotificaciones({
+  const { activa, pendiente, mensaje, activar, soporte, permiso } = useNotificaciones({
     activaInicial,
     claveDisponible,
   });
+
+  const estadoTexto = !soporte
+    ? "No soportado en este navegador."
+    : permiso === "denied"
+      ? "Permiso denegado. Habilitalo desde Ajustes."
+      : pendiente
+        ? "Procesando…"
+        : "Pendiente de activar.";
 
   if (activa || !claveDisponible) return null;
 
@@ -307,11 +354,12 @@ export function TarjetaActivarNotificaciones({
             type="button"
             size="sm"
             className="mt-3"
-            disabled={pendiente}
+            disabled={pendiente || !soporte || permiso === "denied"}
             onClick={() => void activar()}
           >
             Activar notificaciones
           </Button>
+          <p className="mt-2 text-[13px] text-label-2">{estadoTexto}</p>
         </div>
       </div>
       {mensaje ? (
