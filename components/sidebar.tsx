@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -19,10 +20,9 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { IsotipoSigov } from "@/components/marca";
 import { UserMenu, type SesionUI } from "@/components/user-menu";
 import { CUARTEL } from "@/lib/cuartel.config";
-import { PRODUCTO } from "@/lib/marca";
+import { LOGOS, PRODUCTO } from "@/lib/marca";
 
 export type ItemNav = {
   href: string;
@@ -132,12 +132,23 @@ export function Sidebar({
   return (
     <aside className="no-print fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-separator bg-surface lg:flex">
       <div className="flex h-20 shrink-0 items-center gap-3 border-b border-separator px-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-surface-2">
-          <IsotipoSigov size={40} priority alt="" />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[28%] bg-surface shadow-[0_1px_2px_color-mix(in_srgb,var(--color-label)_6%,transparent),0_0_20px_color-mix(in_srgb,var(--color-red)_16%,transparent)] ring-1 ring-separator/60">
+          <Image
+            src={LOGOS.isotipo}
+            alt=""
+            width={44}
+            height={44}
+            priority
+            className="h-full w-full object-cover"
+          />
         </span>
-        <span className="min-w-0">
-          <span className="block text-[17px] font-bold leading-tight text-label">{PRODUCTO.nombre}</span>
-          <span className="block truncate text-[13px] leading-tight text-label-2">{CUARTEL.nombre}</span>
+        <span className="min-w-0 py-0.5">
+          <span className="block text-[20px] font-bold leading-none tracking-[-0.02em] text-label">
+            {PRODUCTO.nombre}
+          </span>
+          <span className="mt-1 block truncate text-[13px] leading-tight text-label-2">
+            {CUARTEL.nombre}
+          </span>
         </span>
       </div>
 
