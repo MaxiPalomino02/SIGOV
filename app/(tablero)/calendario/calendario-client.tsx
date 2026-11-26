@@ -490,7 +490,7 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
                                 ? "bg-red text-surface"
                                 : esMesActual
                                   ? "text-label"
-                                  : "text-label-3"
+                                  : "text-label-2"
                             }`}
                           >
                             {da}
@@ -558,7 +558,7 @@ export function CalendarioClient({ oficial }: CalendarioClientProps) {
                         }}
                         className="scroll-mt-28"
                       >
-                        <p className="mb-2 px-1 text-[13px] font-semibold tracking-[.3px] text-label-2">
+                        <p className="mb-2 px-1 text-[13px] font-normal tracking-[.3px] text-label-2">
                           {encabezadoDia(fechaKey)}
                         </p>
                         <Grupo>

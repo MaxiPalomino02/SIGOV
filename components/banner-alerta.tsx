@@ -103,7 +103,7 @@ export async function BannerAlerta() {
         {vista.texto}
         {vista.extra ? <span className="font-normal">{vista.extra}</span> : null}
       </span>
-      <ChevronRight size={22} strokeWidth={1.75} className="shrink-0 opacity-70" aria-hidden />
+      <ChevronRight size={22} strokeWidth={1.75} className="shrink-0 text-label-3" aria-hidden />
     </Link>
   );
 }

@@ -91,7 +91,7 @@ export function AlertCard({
             <>
               <p className="mt-1 line-clamp-3 text-[15px] leading-[1.45] text-label-2">{descripcion}</p>
               {onVerMas ? (
-                <button type="button" onClick={onVerMas} className="tap mt-1 min-h-11 px-0 text-[15px] font-semibold text-red">
+                <button type="button" onClick={onVerMas} className="tap mt-1 min-h-11 px-0 text-[15px] font-semibold text-red transition-colors duration-200">
                   Ver más
                 </button>
               ) : null}

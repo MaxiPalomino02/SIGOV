@@ -64,7 +64,7 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
                 y={y + 4}
                 textAnchor="end"
                 fontSize={13}
-                className="fill-current font-mono text-label-2"
+                className="num fill-current text-label-2"
               >
                 {Math.round(maximo * proporcion)}
               </text>
@@ -90,7 +90,7 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
                 y={Math.max(arriba + 12, y - 7)}
                 textAnchor="middle"
                 fontSize={12}
-                className="fill-current font-mono font-semibold"
+                className="num fill-current font-semibold"
               >
                 {dato.valor}
                 {unidad}
@@ -123,7 +123,7 @@ export function GraficoBarras({ titulo, datos, unidad = "" }: Props) {
           Ver datos en tabla
         </summary>
         <div className="mt-2 overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[14px]">
+          <table className="w-full border-collapse text-left text-[15px]">
             <thead>
               <tr className="border-b border-separator text-label-2">
                 <th scope="col" className="px-2 py-2">Categoría</th>

@@ -124,13 +124,13 @@ export function FotoInput({
     >
       <span
         id={`${grupoId}-label`}
-        className="font-mono text-[13px] font-semibold uppercase tracking-widest text-ink-muted"
+        className="text-[13px] text-label-2"
       >
         {label}
       </span>
 
-      <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-        <div className="relative aspect-[4/3] w-full bg-bg-subtle">
+      <div className="overflow-hidden rounded-[16px] border border-separator bg-surface">
+        <div className="relative aspect-[4/3] w-full bg-surface-2">
           {preview ? (
             <div
               role="img"
@@ -139,20 +139,20 @@ export function FotoInput({
               style={{ backgroundImage: `url(${preview})` }}
             />
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-ink-secondary">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-label-2">
               <Camera className="h-8 w-8" aria-hidden />
-              <p className="font-mono text-[13px] uppercase tracking-widest">Sin foto</p>
+              <p className="text-[13px]">Sin foto</p>
             </div>
           )}
           {procesando ? (
-            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-bg/80 text-ink">
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-bg/80 text-label">
               <LoaderCircle className="h-5 w-5 animate-spin" aria-hidden />
-              <span className="text-[14px] font-semibold">Procesando…</span>
+              <span className="text-[15px] font-semibold">Procesando…</span>
             </div>
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-line p-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-separator p-3">
           <Button
             variant="secondary"
             size="md"
@@ -208,7 +208,7 @@ export function FotoInput({
         tabIndex={-1}
       />
 
-      {hint ? <p className="text-[13px] text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="text-[13px] text-label-2">{hint}</p> : null}
       {error ? <Aviso variante="error">{error}</Aviso> : null}
     </div>
   );

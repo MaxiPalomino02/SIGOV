@@ -28,12 +28,12 @@ export function DashboardCard({
   className = "",
 }: Props) {
   return (
-    <section className={`overflow-hidden rounded-[12px] bg-surface shadow-[0_1px_2px_rgba(20,26,24,0.08)] ${className}`}>
+    <section className={`overflow-hidden rounded-[16px] bg-surface shadow-[0_1px_2px_rgba(0,0,0,.04)] ${className}`}>
       <header className="px-4 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {loading ? <Skeleton className="h-5 w-40" /> : <h2 className="titulo-tarjeta">{titulo ?? "Panel"}</h2>}
-            {loading ? <Skeleton className="mt-2 h-4 w-64 max-w-full" /> : descripcion ? <p className="texto-aux mt-1">{descripcion}</p> : null}
+            {loading ? <Skeleton className="h-5 w-40" /> : <h2 className="text-[22px] font-bold">{titulo ?? "Panel"}</h2>}
+            {loading ? <Skeleton className="mt-2 h-4 w-64 max-w-full" /> : descripcion ? <p className="text-[15px] mt-1">{descripcion}</p> : null}
           </div>
           {encabezadoAccion ? <div className="shrink-0">{encabezadoAccion}</div> : null}
         </div>
@@ -46,14 +46,14 @@ export function DashboardCard({
             <Skeleton className="h-20 w-full" />
           </div>
         ) : error ? (
-          <div role="alert" className="flex items-start gap-2 rounded-[10px] bg-fire-light p-3 text-[14px] text-fire">
+          <div role="alert" className="flex items-start gap-2 rounded-[14px] bg-red-tint p-3 text-[15px] text-red">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <span>{error}</span>
           </div>
         ) : empty ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-[10px] bg-bg-subtle px-4 py-8 text-center text-ink-muted">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-[14px] bg-surface-2 px-4 py-8 text-center text-label-2">
             <Inbox className="h-8 w-8" aria-hidden />
-            <p className="text-[14px]">{emptyTexto}</p>
+            <p className="text-[15px]">{emptyTexto}</p>
           </div>
         ) : (
           children

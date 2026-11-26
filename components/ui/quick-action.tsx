@@ -19,7 +19,7 @@ type Props = {
 };
 
 const base =
-  "group flex min-h-12 w-full items-center gap-3 rounded-xl border border-line bg-surface p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire-soft focus-visible:ring-offset-2 focus-visible:ring-offset-bg";
+  "tap group flex min-h-12 w-full items-center gap-3 rounded-[16px] border border-separator bg-surface p-3 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-red focus-visible:ring-offset-2 focus-visible:ring-offset-bg";
 
 export function QuickAction({
   icono: Icono,
@@ -35,10 +35,10 @@ export function QuickAction({
   if (loading) {
     return (
       <div
-        className={`flex min-h-12 items-center gap-3 rounded-xl border border-line bg-surface p-3 ${className}`}
+        className={`flex min-h-12 items-center gap-3 rounded-[16px] border border-separator bg-surface p-3 ${className}`}
         aria-busy="true"
       >
-        <Skeleton className="h-10 w-10 rounded-lg" />
+        <Skeleton className="h-10 w-10 rounded-[14px]" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-3 w-2/3" />
@@ -50,20 +50,20 @@ export function QuickAction({
     return (
       <div
         role="alert"
-        className={`flex min-h-12 items-center gap-3 rounded-xl border border-error-border bg-error-light p-3 text-error-text ${className}`}
+        className={`flex min-h-12 items-center gap-3 rounded-[16px] border border-red bg-red-tint p-3 text-red ${className}`}
       >
         <AlertCircle className="h-5 w-5 shrink-0" aria-hidden />
-        <span className="text-[14px] font-semibold">{error}</span>
+        <span className="text-[15px] font-semibold">{error}</span>
       </div>
     );
   }
   if (empty || !titulo) {
     return (
       <div
-        className={`flex min-h-12 items-center gap-3 rounded-xl border border-line bg-bg-subtle p-3 text-ink-muted ${className}`}
+        className={`flex min-h-12 items-center gap-3 rounded-[16px] border border-separator bg-surface-2 p-3 text-label-2 ${className}`}
       >
         <Inbox className="h-5 w-5 shrink-0" aria-hidden />
-        <span className="text-[14px]">Sin acción disponible</span>
+        <span className="text-[15px]">Sin acción disponible</span>
       </div>
     );
   }
@@ -72,13 +72,13 @@ export function QuickAction({
   const IconoResuelto = typeof Icono === "string" ? (ICONOS[Icono] ?? Inbox) : (Icono ?? Inbox);
   const content = (
     <>
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line-subtle bg-bg-subtle text-fire-text transition-colors group-hover:border-fire-border group-hover:bg-fire-light">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-separator bg-surface-2 text-red transition-colors group-hover:border-red group-hover:bg-red-tint">
         <IconoResuelto className="h-5 w-5" aria-hidden />
       </span>
       <span className="min-w-0">
-        <span className="block text-[15px] font-semibold text-ink">{titulo}</span>
+        <span className="block text-[15px] font-semibold text-label">{titulo}</span>
         {descripcion ? (
-          <span className="mt-0.5 block text-[13px] leading-snug text-ink-muted">
+          <span className="mt-0.5 block text-[13px] leading-snug text-label-2">
             {descripcion}
           </span>
         ) : null}
@@ -88,7 +88,7 @@ export function QuickAction({
 
   if (href) {
     return (
-      <Link href={href} className={`${base} hover:bg-surface-hover ${className}`}>
+      <Link href={href} className={`${base} hover:bg-surface-2 ${className}`}>
         {content}
       </Link>
     );
@@ -98,7 +98,7 @@ export function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className={`${base} cursor-pointer hover:bg-surface-hover ${className}`}
+      className={`${base} cursor-pointer hover:bg-surface-2 ${className}`}
     >
       {content}
     </button>

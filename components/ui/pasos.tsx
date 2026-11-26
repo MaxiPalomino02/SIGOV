@@ -31,21 +31,21 @@ export function Pasos({
               type="button"
               onClick={() => (hecho ? onIr(p.n) : undefined)}
               aria-current={activo ? "step" : undefined}
-              className={`flex min-h-11 items-center gap-2 rounded-full border px-3 text-[14px] font-semibold transition-colors ${
+              className={`flex min-h-11 items-center gap-2 rounded-full border px-3 text-[15px] font-semibold transition-colors ${
                 activo
-                  ? "border-fire bg-fire/15 text-ink"
+                  ? "border-red bg-red-tint text-label"
                   : hecho
-                    ? "border-brass/50 bg-brass/10 text-brass hover:bg-brass/15"
-                    : "border-line bg-surface text-ink-muted"
+                    ? "border-yellow bg-yellow-tint text-yellow-ink hover:bg-yellow-tint"
+                    : "border-separator bg-surface text-label-2"
               } ${hecho ? "cursor-pointer" : "cursor-default"}`}
             >
               <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                className={`num flex h-5 w-5 items-center justify-center rounded-full text-[12px] ${
                   activo
-                    ? "bg-fire text-ink"
-                    : hecho
-                      ? "bg-brass text-bg"
-                      : "bg-bg-subtle text-ink-muted"
+                  ? "bg-red text-surface"
+                  : hecho
+                    ? "bg-yellow text-label"
+                      : "bg-surface-2 text-label-2"
                 }`}
               >
                 {hecho ? <Check className="h-3 w-3" aria-hidden /> : p.n}
@@ -53,7 +53,7 @@ export function Pasos({
               {p.label}
             </button>
             {index < pasos.length - 1 ? (
-              <span aria-hidden className="h-px w-4 bg-line" />
+              <span aria-hidden className="h-px w-4 bg-separator" />
             ) : null}
           </li>
         );

@@ -1,11 +1,22 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import { BellRing, Smartphone, VolumeX } from "lucide-react";
-import { Aviso } from "@/components/ui/aviso";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { SectionHeading } from "@/components/ui/section-heading";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  BellRing,
+  CalendarDays,
+  CheckCircle2,
+  CircleX,
+  CloudLightning,
+  Info,
+  Megaphone,
+  Siren,
+  Smartphone,
+  VolumeX,
+  type LucideIcon,
+} from "lucide-react";
+import { Fila } from "@/components/ui/fila";
+import { Grupo } from "@/components/ui/grupo";
+import { Switch } from "@/components/ui/switch";
 import { urlBase64ToUint8Array } from "@/lib/push-client";
 import {
   activarSuscripcionPush,
@@ -35,6 +46,13 @@ function permisoServidor(): EstadoPermiso {
   return null;
 }
 
+function esIphone(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const iphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const ipadModerno = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return iphone || ipadModerno;
+}
+
 export function NotificacionesClient({
   activaInicial,
   claveDisponible,
@@ -45,11 +63,19 @@ export function NotificacionesClient({
   const [mensaje, setMensaje] = useState<Mensaje | null>(
     errorInicial ? { variante: "error", texto: errorInicial } : null
   );
-  const permiso = useSyncExternalStore(
+  const [permisoLocal, setPermisoLocal] = useState<EstadoPermiso>(null);
+  const [iphone, setIphone] = useState(false);
+  const permisoStore = useSyncExternalStore(
     suscribirPermiso,
     obtenerPermiso,
     permisoServidor
   );
+  const permiso = permisoLocal ?? permisoStore;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIphone(esIphone()));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   async function activar() {
     setMensaje(null);
@@ -63,6 +89,7 @@ export function NotificacionesClient({
       }
 
       const respuesta = await Notification.requestPermission();
+      setPermisoLocal(respuesta);
       if (respuesta !== "granted") {
         setMensaje({
           variante: "error",
@@ -160,90 +187,143 @@ export function NotificacionesClient({
     }
   }
 
-  const descripcionEstado = activa
-    ? "Este dispositivo puede recibir avisos, convocatorias, alarmas y alertas."
-    : "Todavía no activaste las notificaciones en este dispositivo.";
+  const cambiarNotificaciones = (checked: boolean) => {
+    if (pendiente) return;
+    if (checked) void activar();
+    else void desactivar();
+  };
+
+  const permisoTexto =
+    permiso === "granted"
+      ? "Activadas"
+      : permiso === "denied"
+        ? "Bloqueadas"
+        : permiso === "no-soportado"
+          ? "No disponibles"
+          : "Sin pedir";
+  const permisoDetalle =
+    permiso === "granted"
+      ? "Este dispositivo puede recibir avisos del cuartel."
+      : permiso === "denied"
+        ? "Andá a Ajustes del sitio y habilitá las notificaciones."
+        : permiso === "no-soportado"
+          ? "Este navegador no admite notificaciones."
+          : "Tocá el switch para pedir permiso.";
+  const permisoIcono: LucideIcon =
+    permiso === "granted"
+      ? BellRing
+      : permiso === "denied"
+        ? CircleX
+        : Info;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8">
-      <SectionHeading
-        titulo="Notificaciones"
-        descripcion="Avisos breves cuando hay novedades en el cuartel, incluso con la app cerrada."
-      />
+    <div className="mx-auto w-full max-w-[520px] px-4 py-8">
+      <h1 className="text-[34px] font-bold leading-tight tracking-[-.4px] text-label">
+        Notificaciones
+      </h1>
+      <p className="mt-1 text-[15px] leading-relaxed text-label-2">
+        Avisos breves cuando hay novedades en el cuartel, incluso con la app cerrada.
+      </p>
 
-      <div className="mt-6 space-y-4">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-full border border-line bg-bg-subtle">
-              <BellRing className="size-5 text-fire-text" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h2 className="heading-display text-lg text-ink">Estado</h2>
-              <p className="mt-1 text-[16px] leading-relaxed text-ink-muted">
-                {descripcionEstado}
-              </p>
-              {permiso === "denied" ? (
-                <p className="mt-2 text-[14px] leading-relaxed text-fire-text">
-                  El navegador tiene bloqueados los permisos. Habilitalos desde los
-                  ajustes del sitio para poder activarlas.
-                </p>
-              ) : null}
-              {permiso === "no-soportado" ? (
-                <p className="mt-2 text-[14px] leading-relaxed text-fire-text">
-                  Este navegador no admite notificaciones.
-                </p>
-              ) : null}
-            </div>
+      <div className="mt-6 space-y-5">
+        {iphone ? (
+          <div
+            role="note"
+            className="flex items-start gap-3 rounded-[16px] bg-yellow-tint px-4 py-3 text-[15px] leading-relaxed text-yellow-ink animate-fade-in"
+          >
+            <Smartphone size={22} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
+            <p>En iPhone funcionan solo con la app instalada.</p>
           </div>
+        ) : null}
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Button
-              onClick={activar}
-              disabled={pendiente || !claveDisponible || permiso === "no-soportado"}
-            >
-              {pendiente ? "Procesando…" : activa ? "Volver a activar" : "Activar"}
-            </Button>
-            {activa ? (
-              <Button
-                variant="secondary"
-                onClick={desactivar}
-                disabled={pendiente}
+        <div
+          role="note"
+          className="flex items-start gap-3 rounded-[16px] bg-surface-2 px-4 py-3 text-[15px] leading-relaxed text-label-2"
+        >
+          <VolumeX size={22} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
+          <p>
+            Complementan, no reemplazan, la sirena y la radio. No suenan en bucle ni
+            pasan el modo silencio.
+          </p>
+        </div>
+
+        <section>
+          <h2 className="mb-2 px-1 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">
+            Estado
+          </h2>
+          <Grupo>
+            <Switch
+              checked={activa}
+              onChange={cambiarNotificaciones}
+              etiqueta="Activar notificaciones"
+              descripcion={pendiente ? "Procesando…" : undefined}
+              disabled={pendiente || permiso === "no-soportado"}
+            />
+
+            <div className="fila flex items-center gap-3 px-4 py-2">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center text-label-2">
+                {(() => {
+                  const Icono = permisoIcono;
+                  return <Icono size={22} strokeWidth={1.75} aria-hidden />;
+                })()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[17px] font-medium text-label">
+                  Permiso del navegador
+                </span>
+                <span className="mt-0.5 block text-[15px] text-label-2">
+                  {permisoDetalle}
+                </span>
+              </span>
+              <span className="num shrink-0 text-[17px] text-label-2">{permisoTexto}</span>
+            </div>
+
+            {mensaje ? (
+              <div
+                role={mensaje.variante === "error" ? "alert" : "status"}
+                className={`flex items-start gap-2 border-t border-separator px-4 py-3 text-[15px] leading-relaxed animate-fade-in ${
+                  mensaje.variante === "error"
+                    ? "bg-red-tint text-red"
+                    : "bg-green-tint text-green-ink"
+                }`}
               >
-                Desactivar
-              </Button>
+                {mensaje.variante === "error" ? (
+                  <CircleX size={20} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
+                ) : (
+                  <CheckCircle2 size={20} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
+                )}
+                <span>{mensaje.texto}</span>
+              </div>
             ) : null}
-          </div>
+          </Grupo>
+        </section>
 
-          {mensaje ? (
-            <div className="mt-4">
-              <Aviso variante={mensaje.variante}>{mensaje.texto}</Aviso>
-            </div>
-          ) : null}
-        </Card>
-
-        <Card className="p-5 sm:p-6">
-          <div className="space-y-4 text-[16px] leading-relaxed text-ink-muted">
-            <div className="flex items-start gap-3">
-              <Smartphone className="mt-0.5 size-5 shrink-0 text-brass" aria-hidden />
-              <p>
-                En iPhone, las notificaciones push solo funcionan si agregaste SIGOV
-                a la pantalla de inicio y la abrís como app instalada.
-              </p>
-            </div>
-            <div className="flex items-start gap-3">
-              <VolumeX className="mt-0.5 size-5 shrink-0 text-alarm" aria-hidden />
-              <p>
-                Una notificación push no suena en bucle ni pasa el modo silencio como
-                una alarma nativa. Si más adelante hace falta una alarma crítica, el
-                camino es envolver SIGOV con Capacitor.
-              </p>
-            </div>
-            <p>
-              Estas notificaciones complementan, y no reemplazan, la sirena y la
-              radio del cuartel.
-            </p>
-          </div>
-        </Card>
+        <Grupo titulo="Qué recibís">
+          <Fila
+            titulo="Avisos"
+            subtitulo="Novedades del cuartel"
+            icono={Megaphone}
+            chevron={false}
+          />
+          <Fila
+            titulo="Convocatorias"
+            subtitulo="Nuevos llamados y guardias"
+            icono={CalendarDays}
+            chevron={false}
+          />
+          <Fila
+            titulo="Alarmas"
+            subtitulo="Salidas y novedades operativas"
+            icono={Siren}
+            chevron={false}
+          />
+          <Fila
+            titulo="Alertas del SMN"
+            subtitulo="Avisos naranjas y rojas"
+            icono={CloudLightning}
+            chevron={false}
+          />
+        </Grupo>
       </div>
     </div>
   );

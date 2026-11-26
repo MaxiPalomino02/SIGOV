@@ -1,52 +1,116 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   cargarHistorial,
   formatTimestamp,
-  tiempoRelativo,
   type HistorialEntry,
   type HistorialTurno,
 } from "@/lib/historial";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
-import { formatFechaKey, franjaCorta } from "@/lib/tablero";
-import { ArrowLeftRight, History, MessageSquare, UserMinus, UserPlus } from "lucide-react";
+import { formatFechaKey, franjaHora, sumarDias } from "@/lib/tablero";
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Grupo } from "@/components/ui/grupo";
+import { Hoja } from "@/components/ui/hoja";
+import { Input } from "@/components/ui/input";
+import {
+  ArrowLeftRight,
+  CalendarDays,
+  MessageSquare,
+  UserMinus,
+  UserPlus,
+  X,
+} from "lucide-react";
 
-function TurnoMono({ turno }: { turno: HistorialTurno }) {
-  return (
-    <span className="dato-mono rounded bg-brass-light px-2 py-0.5 text-[13px] text-brass">
-      {formatFechaKey(turno.fecha)} · {franjaCorta(turno.franja)}
-    </span>
-  );
+type Filtro = "todas" | "anoto" | "cancelo" | "cambio";
+type Rango = { desde: string; hasta: string };
+
+const FILTROS: readonly { valor: Filtro; etiqueta: string }[] = [
+  { valor: "todas", etiqueta: "Todos" },
+  { valor: "anoto", etiqueta: "Anotaciones" },
+  { valor: "cancelo", etiqueta: "Cancelaciones" },
+  { valor: "cambio", etiqueta: "Cambios" },
+];
+
+const ICONOS = {
+  anoto: { Icono: UserPlus, fondo: "bg-green-tint", color: "text-green-ink" },
+  cancelo: { Icono: UserMinus, fondo: "bg-red-tint", color: "text-red" },
+  cambio: { Icono: ArrowLeftRight, fondo: "bg-yellow-tint", color: "text-yellow-ink" },
+} as const;
+
+function claveFecha(iso: string): string {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Tucuman",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(iso));
+  const valor = (tipo: string) =>
+    partes.find((parte) => parte.type === tipo)?.value ?? "";
+  return `${valor("year")}-${valor("month")}-${valor("day")}`;
+}
+
+function etiquetaDia(fecha: string, hoy: string): string {
+  if (fecha === hoy) return "HOY";
+  if (fecha === sumarDias(hoy, -1)) return "AYER";
+  const [, mes, dia] = fecha.split("-");
+  return `${formatFechaKey(fecha).slice(0, 3).toUpperCase()} ${dia}/${mes}`;
+}
+
+function horaMovimiento(iso: string): string {
+  return formatTimestamp(iso).split(" ")[1] ?? "";
+}
+
+function textoGuardia(turno: HistorialTurno | null, porDefecto: string): string {
+  if (!turno) return porDefecto;
+  const [, mes, dia] = turno.fecha.split("-");
+  const diaCorto = formatFechaKey(turno.fecha).slice(0, 3).toLowerCase();
+  return `${franjaHora(turno.franja)} del ${diaCorto} ${dia}/${mes}`;
 }
 
 function textoEntrada(entrada: HistorialEntry) {
+  let frase: ReactNode;
   if (entrada.accion === "anoto") {
-    return (
-      <div className="flex flex-wrap items-center gap-1.5 text-[16px]">
-        <span className="font-medium text-ink">{entrada.bomberoNombre}</span>
-        <span className="text-ink-muted">se anotó en la guardia de</span>
-        {entrada.nuevo ? <TurnoMono turno={entrada.nuevo} /> : <span>un turno</span>}
-      </div>
+    frase = (
+      <>
+        <span className="font-semibold">{entrada.bomberoNombre}</span> se anotó{" "}
+        <span className="num">{textoGuardia(entrada.nuevo, "en un turno")}</span>
+      </>
+    );
+  } else if (entrada.accion === "cancelo") {
+    frase = (
+      <>
+        <span className="font-semibold">{entrada.bomberoNombre}</span> canceló su guardia{" "}
+        <span className="num">{textoGuardia(entrada.nuevo, "sin turno asociado")}</span>
+      </>
+    );
+  } else {
+    frase = (
+      <>
+        <span className="font-semibold">{entrada.bomberoNombre}</span> cambió{" "}
+        <span className="num">{textoGuardia(entrada.anterior, "de un turno")}</span> a{" "}
+        <span className="num">{textoGuardia(entrada.nuevo, "otro turno")}</span>
+      </>
     );
   }
-  if (entrada.accion === "cancelo") {
-    return (
-      <div className="flex flex-wrap items-center gap-1.5 text-[16px]">
-        <span className="font-medium text-ink">{entrada.bomberoNombre}</span>
-        <span className="text-ink-muted">canceló su guardia de</span>
-        {entrada.nuevo ? <TurnoMono turno={entrada.nuevo} /> : <span>un turno</span>}
-      </div>
-    );
-  }
+
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-[16px]">
-      <span className="font-medium text-ink">{entrada.bomberoNombre}</span>
-      <span className="text-ink-muted">cambió del turno</span>
-      {entrada.anterior ? <TurnoMono turno={entrada.anterior} /> : <span>su turno</span>}
-      <span className="text-ink-muted">al</span>
-      {entrada.nuevo ? <TurnoMono turno={entrada.nuevo} /> : <span>otro turno</span>}
-    </div>
+    <span className="block text-[15px] leading-snug text-label">
+      {frase}
+      {entrada.nota ? (
+        <span className="mt-1 flex items-start gap-1.5 text-[13px] text-label-2">
+          <MessageSquare
+            size={14}
+            strokeWidth={1.75}
+            className="mt-0.5 shrink-0 text-label-3"
+            aria-hidden
+          />
+          <span>{entrada.nota}</span>
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -59,7 +123,12 @@ export function Historial({
 }) {
   const [entradas, setEntradas] = useState(iniciales);
   const [ahora, setAhora] = useState<Date>(() => new Date(ahoraServer));
-  const [filtroAccion, setFiltroAccion] = useState<"todas" | "anoto" | "cancelo" | "cambio">("todas");
+  const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [rango, setRango] = useState<Rango>({ desde: "", hasta: "" });
+  const [fechasAbiertas, setFechasAbiertas] = useState(false);
+  const [visible, setVisible] = useState(20);
 
   const clientRef = useRef<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
   const getClient = useCallback(() => {
@@ -92,85 +161,205 @@ export function Historial({
     };
   }, [getClient]);
 
-  const entradasFiltradas = useMemo(() => {
-    if (filtroAccion === "todas") return entradas;
-    return entradas.filter((e) => e.accion === filtroAccion);
-  }, [entradas, filtroAccion]);
+  const hoy = useMemo(() => claveFecha(ahora.toISOString()), [ahora]);
 
-  const filtroBtn = (key: typeof filtroAccion, label: string, active: string) =>
-    `min-h-11 rounded-[10px] px-3 text-[13px] font-medium transition-colors ${
-      filtroAccion === key ? active : "text-ink-muted hover:bg-surface-hover"
-    }`;
+  const entradasFiltradas = useMemo(
+    () =>
+      entradas.filter((entrada) => {
+        if (filtro !== "todas" && entrada.accion !== filtro) return false;
+        const dia = claveFecha(entrada.timestamp);
+        if (rango.desde && dia < rango.desde) return false;
+        if (rango.hasta && dia > rango.hasta) return false;
+        return true;
+      }),
+    [entradas, filtro, rango]
+  );
+
+  const grupos = useMemo(() => {
+    const agrupadas = new Map<string, HistorialEntry[]>();
+    for (const entrada of entradasFiltradas.slice(0, visible)) {
+      const dia = claveFecha(entrada.timestamp);
+      const lista = agrupadas.get(dia) ?? [];
+      lista.push(entrada);
+      agrupadas.set(dia, lista);
+    }
+    return Array.from(agrupadas.entries());
+  }, [entradasFiltradas, visible]);
+
+  const rangoInvalido = Boolean(desde && hasta && desde > hasta);
+
+  function limpiarFiltros() {
+    setFiltro("todas");
+    setDesde("");
+    setHasta("");
+    setRango({ desde: "", hasta: "" });
+    setVisible(20);
+  }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:py-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="titulo-pagina">Historial de movimientos</h1>
-          <p className="texto-aux mt-1">Asignaciones, cancelaciones y cambios de guardia.</p>
-        </div>
+    <div className="min-h-dvh bg-bg pb-24">
+      <PageHeader
+        titulo="Historial"
+        subtitulo="Movimientos de las guardias"
+        acciones={
+          <button
+            type="button"
+            onClick={() => setFechasAbiertas(true)}
+            aria-label="Elegir fechas"
+            className="tap flex h-11 items-center gap-2 rounded-[14px] bg-surface-2 px-3 text-[15px] text-label-2 transition-colors hover:bg-red-tint hover:text-red focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+          >
+            <CalendarDays size={22} strokeWidth={1.75} aria-hidden />
+            <span className="hidden sm:inline">Fechas</span>
+          </button>
+        }
+      />
 
-        <div className="flex flex-wrap items-center gap-1 self-start sm:self-auto">
-          <button type="button" onClick={() => setFiltroAccion("todas")} className={filtroBtn("todas", "Todos", "bg-ink text-bg")}>
-            Todos
-          </button>
-          <button type="button" onClick={() => setFiltroAccion("anoto")} className={filtroBtn("anoto", "Altas", "bg-ok-light text-ok")}>
-            Altas
-          </button>
-          <button type="button" onClick={() => setFiltroAccion("cancelo")} className={filtroBtn("cancelo", "Bajas", "bg-fire-light text-fire")}>
-            Bajas
-          </button>
-          <button type="button" onClick={() => setFiltroAccion("cambio")} className={filtroBtn("cambio", "Cambios", "bg-alarm-light text-alarm")}>
-            Cambios
-          </button>
-        </div>
-      </div>
-
-      {entradasFiltradas.length === 0 ? (
-        <div className="mt-6 rounded-[12px] bg-surface p-8 text-center shadow-[0_1px_2px_rgba(20,26,24,0.08)]">
-          <History className="mx-auto mb-3 h-8 w-8 text-ink-muted" aria-hidden />
-          <p className="text-[16px] font-medium text-ink">No hay movimientos</p>
-          <p className="texto-aux mt-1">Los cambios en las guardias van a aparecer acá.</p>
-        </div>
-      ) : (
-        <ol className="mt-4 space-y-3">
-          {entradasFiltradas.map((entrada) => {
-            const esAlta = entrada.accion === "anoto";
-            const esBaja = entrada.accion === "cancelo";
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-5 lg:px-8">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar movimientos">
+          {FILTROS.map((opcion) => {
+            const activo = filtro === opcion.valor;
             return (
-              <li key={entrada.id} className="rounded-[12px] bg-surface p-4 shadow-[0_1px_2px_rgba(20,26,24,0.08)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                        esAlta ? "bg-ok-light text-ok" : esBaja ? "bg-fire-light text-fire" : "bg-alarm-light text-alarm"
-                      }`}
-                    >
-                      {esAlta ? <UserPlus className="h-4 w-4" aria-hidden /> : esBaja ? <UserMinus className="h-4 w-4" aria-hidden /> : <ArrowLeftRight className="h-4 w-4" aria-hidden />}
-                    </div>
-                    <div>
-                      {textoEntrada(entrada)}
-                      {entrada.nota ? (
-                        <div className="mt-2 flex items-start gap-1.5 text-[13px] text-ink-muted">
-                          <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                          <span>{entrada.nota}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="hidden shrink-0 text-right sm:block">
-                    <p className="dato-mono text-[13px] text-ink">{tiempoRelativo(entrada.timestamp, ahora)}</p>
-                    <p className="dato-mono text-[13px] text-ink-muted">{formatTimestamp(entrada.timestamp)}</p>
-                  </div>
-                </div>
-                <p className="dato-mono mt-2 text-[13px] text-ink-muted sm:hidden">
-                  {tiempoRelativo(entrada.timestamp, ahora)} · {formatTimestamp(entrada.timestamp)}
-                </p>
-              </li>
+              <button
+                key={opcion.valor}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => {
+                  setFiltro(opcion.valor);
+                  setVisible(20);
+                }}
+                className={`tap min-h-11 rounded-full px-4 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                  activo
+                    ? "bg-red text-surface"
+                    : "bg-surface-2 text-label-2 hover:bg-red-tint hover:text-red"
+                }`}
+              >
+                {opcion.etiqueta}
+              </button>
             );
           })}
-        </ol>
-      )}
+        </div>
+
+        {rango.desde || rango.hasta ? (
+          <button
+            type="button"
+            onClick={limpiarFiltros}
+            className="tap mt-3 flex min-h-11 items-center gap-2 rounded-full bg-yellow-tint px-4 text-[15px] text-yellow-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+          >
+            <span className="num">
+              {rango.desde || "…"} – {rango.hasta || "…"}
+            </span>
+            <X size={18} strokeWidth={1.75} aria-hidden />
+            <span className="sr-only">Quitar filtro de fechas</span>
+          </button>
+        ) : null}
+
+        {grupos.length === 0 ? (
+          <EstadoVacio
+            icono="History"
+            titulo="No hay movimientos"
+            texto="Los cambios en las guardias van a aparecer acá."
+            className="mt-5"
+            accion={
+              filtro !== "todas" || rango.desde || rango.hasta
+                ? { label: "Limpiar filtros", onClick: limpiarFiltros }
+                : undefined
+            }
+          />
+        ) : (
+          <div className="mt-5 space-y-5">
+            {grupos.map(([dia, entradasDia]) => (
+              <Grupo key={dia} titulo={etiquetaDia(dia, hoy)}>
+                {entradasDia.map((entrada) => {
+                  const { Icono, fondo, color } = ICONOS[entrada.accion];
+                  return (
+                    <div key={entrada.id} className="fila flex items-start gap-3 px-4 py-3">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${fondo} ${color}`}
+                      >
+                        <Icono size={18} strokeWidth={1.75} aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 pt-0.5">{textoEntrada(entrada)}</span>
+                      <span className="num shrink-0 pt-0.5 text-[13px] text-label-2">
+                        {horaMovimiento(entrada.timestamp)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </Grupo>
+            ))}
+
+            {visible < entradasFiltradas.length ? (
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => setVisible((cantidad) => cantidad + 20)}
+              >
+                Ver más
+              </Button>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <Hoja
+        open={fechasAbiertas}
+        onClose={() => setFechasAbiertas(false)}
+        title="Elegir fechas"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setFechasAbiertas(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="w-full"
+              disabled={rangoInvalido}
+              onClick={() => {
+                setRango({ desde, hasta });
+                setVisible(20);
+                setFechasAbiertas(false);
+              }}
+            >
+              Aplicar
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            type="date"
+            label="Desde"
+            value={desde}
+            onChange={(evento) => setDesde(evento.target.value)}
+          />
+          <Input
+            type="date"
+            label="Hasta"
+            value={hasta}
+            onChange={(evento) => setHasta(evento.target.value)}
+          />
+          {rangoInvalido ? (
+            <p className="text-[13px] text-red">
+              La fecha «Desde» no puede ser posterior a «Hasta».
+            </p>
+          ) : null}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              setDesde("");
+              setHasta("");
+              setRango({ desde: "", hasta: "" });
+              setVisible(20);
+            }}
+          >
+            Limpiar fechas
+          </Button>
+        </div>
+      </Hoja>
     </div>
   );
 }

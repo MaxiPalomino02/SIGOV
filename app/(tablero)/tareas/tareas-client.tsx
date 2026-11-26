@@ -1,18 +1,18 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Check, CheckCircle2, Lock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Grupo } from "@/components/ui/grupo";
 import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { SectionHeading } from "@/components/ui/section-heading";
+import { PageHeader } from "@/components/page-header";
+import { Segmentado } from "@/components/ui/segmentado";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Aviso } from "@/components/ui/aviso";
 import { createBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { EVENTO_DATOS, encolarOperacion } from "@/lib/cola-sincronizacion";
-import { textoHechaPor } from "@/lib/tareas-reglas";
+import { REGLAS_TAREAS, textoHechaPor } from "@/lib/tareas-reglas";
 import { borrarTarea, crearTarea, desmarcarTarea, editarTarea, marcarTarea } from "./actions";
 
 export type TareaVista = {
@@ -42,6 +42,19 @@ function datosFormulario(formData: FormData): Record<string, unknown> {
 
 function hayConexion(): boolean {
   return typeof navigator === "undefined" || navigator.onLine;
+}
+
+function AvisoLocal({ texto, tipo }: { texto: string; tipo: "ok" | "error" }) {
+  return (
+    <p
+      role="status"
+      className={`rounded-[14px] px-4 py-3 text-[15px] ${
+        tipo === "error" ? "bg-red-tint text-red" : "bg-green-tint text-green-ink"
+      }`}
+    >
+      {texto}
+    </p>
+  );
 }
 
 async function encolarTarea(
@@ -74,6 +87,14 @@ export function TareasClient({
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [cargandoId, setCargandoId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [ahora, setAhora] = useState(0);
+  const [motivosBloqueo, setMotivosBloqueo] = useState<Record<string, string>>({});
+  const [hojaBloqueo, setHojaBloqueo] = useState<{
+    id: string;
+    motivo: string;
+  } | null>(null);
+  const [borrando, setBorrando] = useState<TareaVista | null>(null);
+  const [toastEsperandoId, setToastEsperandoId] = useState<string | null>(null);
 
   const refrescar = useCallback(async () => {
     try {
@@ -110,6 +131,21 @@ export function TareasClient({
     window.addEventListener(EVENTO_DATOS, refrescar);
     return () => window.removeEventListener(EVENTO_DATOS, refrescar);
   }, [refrescar]);
+
+  useEffect(() => {
+    const inicial = window.setTimeout(() => setAhora(Date.now()), 0);
+    const intervalo = window.setInterval(() => setAhora(Date.now()), 30_000);
+    return () => {
+      window.clearTimeout(inicial);
+      window.clearInterval(intervalo);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!toastEsperandoId) return;
+    const id = window.setTimeout(() => setToastEsperandoId(null), 3_000);
+    return () => window.clearTimeout(id);
+  }, [toastEsperandoId]);
 
   const pendientes = useMemo(() => tareas.filter((t) => t.estado === "pendiente"), [tareas]);
   const hechas = useMemo(() => tareas.filter((t) => t.estado === "hecha"), [tareas]);
@@ -159,7 +195,15 @@ export function TareasClient({
       setCargandoId(null);
       if (res.ok) await refrescar();
       else if (await encolarTarea(accion, `tarea:${t.id}`, { tareaId: t.id })) aplicarLocal();
-      else setMensaje({ tipo: "error", texto: res.error });
+      else if (accion === "marcar_tarea") {
+        if (res.error === "Esta tarea ya fue marcada como hecha.") {
+          void refrescar();
+          setToastEsperandoId(t.id);
+        } else {
+          setMotivosBloqueo((prev) => ({ ...prev, [t.id]: res.error }));
+          setHojaBloqueo({ id: t.id, motivo: res.error });
+        }
+      } else setMensaje({ tipo: "error", texto: res.error });
     } catch {
       setCargandoId(null);
       if (await encolarTarea(accion, `tarea:${t.id}`, { tareaId: t.id })) aplicarLocal();
@@ -168,7 +212,6 @@ export function TareasClient({
   };
 
   const onBorrar = async (t: TareaVista) => {
-    if (!confirm("¿Borrar esta tarea? Esta acción no se puede deshacer.")) return;
     setMensaje(null); setCargandoId(t.id);
     const aplicarLocal = () => {
       setTareas((prev) => prev.filter((x) => x.id !== t.id));
@@ -187,113 +230,305 @@ export function TareasClient({
     }
   };
 
-  const tabBtn = (key: TabKey, label: string, count: number) => (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={tab === key}
-      onClick={() => setTab(key)}
-      className={`min-h-11 rounded-[10px] px-3 text-[13px] font-medium transition-colors ${tab === key ? "bg-ink text-bg" : "text-ink-muted hover:bg-surface-hover"}`}
-    >
-      {label} <span className="dato-mono text-[13px]">{count}</span>
-    </button>
-  );
+  const textoVacio =
+    tab === "pendientes"
+      ? "No hay tareas pendientes."
+      : tab === "mias"
+      ? "No tenés tareas asignadas."
+      : "Todavía no hay tareas hechas.";
+  const tareaToast = toastEsperandoId
+    ? tareas.find((t) => t.id === toastEsperandoId)
+    : null;
+  const toastTexto = tareaToast?.completada_nombre
+    ? `Ya la marcó ${tareaToast.completada_nombre}`
+    : null;
+  const cerrarFormulario = () => {
+    if (!isPending) {
+      setHojaAbierta(false);
+      setEditando(null);
+    }
+  };
+  const confirmarBorrar = async () => {
+    const tarea = borrando;
+    if (!tarea) return;
+    setBorrando(null);
+    await onBorrar(tarea);
+  };
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 px-4 py-6 sm:px-6">
-      <SectionHeading
+    <>
+      <PageHeader
         titulo="Tareas"
-        descripcion="Tareas del cuartel y asignaciones."
-        accion={esOficial ? (
-          <button type="button" onClick={abrirCrear} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] bg-fire px-4 text-[16px] font-medium text-ink hover:bg-fire-dark">
-            <Plus className="h-4 w-4" aria-hidden /> Nueva tarea
-          </button>
-        ) : undefined}
+        acciones={
+          <>
+            <span className="num rounded-full bg-surface-2 px-3 py-1 text-[13px] text-label-2">
+              {pendientes.length} pendientes
+            </span>
+            {esOficial ? (
+              <button
+                type="button"
+                onClick={abrirCrear}
+                aria-label="Nueva tarea"
+                className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed"
+              >
+                <Plus size={22} strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+          </>
+        }
       />
 
-      {mensaje ? <Aviso variante={mensaje.tipo === "ok" ? "ok" : "error"}>{mensaje.texto}</Aviso> : null}
-      {cargaError ? <Aviso variante="error">{cargaError}</Aviso> : null}
+      <div className="no-print mx-auto w-full max-w-[1100px] space-y-5 px-4 pb-8 pt-4">
+        {mensaje ? <AvisoLocal texto={mensaje.texto} tipo={mensaje.tipo} /> : null}
+        {cargaError ? <AvisoLocal texto={cargaError} tipo="error" /> : null}
 
-      <div role="tablist" aria-label="Filtro de tareas" className="flex flex-wrap gap-2">
-        {tabBtn("pendientes", "Pendientes", pendientes.length)}
-        {tabBtn("mias", "Mías", mias.length)}
-        {tabBtn("hechas", "Hechas", hechas.length)}
-      </div>
+        <Segmentado
+          etiqueta="Filtro de tareas"
+          opciones={[
+            { valor: "pendientes", etiqueta: "Pendientes" },
+            { valor: "mias", etiqueta: "Mis tareas" },
+            { valor: "hechas", etiqueta: "Hechas" },
+          ]}
+          valor={tab}
+          onChange={(valor) => setTab(valor as TabKey)}
+        />
 
-      <DashboardCard
-        titulo={tab === "pendientes" ? "Tareas pendientes" : tab === "mias" ? "Mis tareas" : "Tareas hechas"}
-        descripcion={tab === "hechas" ? "Historial de tareas completadas." : "Marcá una tarea cuando esté lista."}
-      >
         {visibles.length === 0 ? (
-          <EstadoVacio
-            icono="ClipboardList"
-            titulo={tab === "hechas" ? "No hay tareas hechas" : "No hay tareas pendientes"}
-            texto={tab === "hechas" ? "Las tareas completadas van a aparecer acá." : "Cuando haya tareas, las vas a ver acá."}
-          />
+          <div className="flex flex-col items-center justify-center rounded-[16px] bg-surface px-6 py-12 text-center animate-fade-in">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-tint text-green-ink">
+              <CheckCircle2 size={28} strokeWidth={1.75} aria-hidden />
+            </span>
+            <p className="text-[17px] text-label-2">{textoVacio}</p>
+          </div>
         ) : (
-          <ul className="space-y-3">
+          <Grupo>
             {visibles.map((t) => {
               const hecha = t.estado === "hecha";
-              const puedeEditar = esOficial;
-              const puedeBorrar = esOficial;
+              const motivoBloqueo = motivosBloqueo[t.id];
+              const bloqueada = !hecha && Boolean(motivoBloqueo);
+              const tiempoDesdeHecha = t.completada_en
+                ? ahora - new Date(t.completada_en).getTime()
+                : Number.POSITIVE_INFINITY;
+              const puedeDeshacer =
+                esOficial ||
+                (tiempoDesdeHecha >= 0 &&
+                  tiempoDesdeHecha < REGLAS_TAREAS.desmarcarMinutos * 60_000);
+              const hechaPor =
+                hecha && t.completada_nombre && t.completada_en
+                  ? textoHechaPor(t.completada_nombre, t.completada_en).replace(
+                      " - ",
+                      ", "
+                    )
+                  : null;
+
               return (
-                <li key={t.id} className="rounded-[12px] bg-bg-subtle p-3 sm:p-4">
-                  <div className="flex items-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void toggleHecha(t)}
-                      disabled={cargandoId === t.id}
-                      aria-label={hecha ? `Marcar "${t.titulo}" como pendiente` : `Marcar "${t.titulo}" como hecha`}
-                      className={`mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border transition-colors disabled:opacity-50 ${hecha ? "border-ok bg-ok-light text-ok" : "border-line bg-surface text-ink-muted hover:border-ok hover:text-ok"}`}
+                <div
+                  key={t.id}
+                  className="fila flex items-start gap-3 px-4 py-3 animate-fade-in"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (bloqueada && motivoBloqueo) {
+                        setHojaBloqueo({ id: t.id, motivo: motivoBloqueo });
+                      } else {
+                        void toggleHecha(t);
+                      }
+                    }}
+                    aria-disabled={bloqueada || cargandoId === t.id}
+                    aria-label={
+                      bloqueada
+                        ? "La puede marcar quien está de guardia ahora"
+                        : hecha
+                        ? `Desmarcar "${t.titulo}"`
+                        : `Marcar "${t.titulo}" como hecha`
+                    }
+                    className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+                  >
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border transition-all duration-200 ease-[cubic-bezier(.2,.8,.2,1)] ${
+                        bloqueada
+                          ? "border-separator bg-surface-2 text-label-3"
+                          : hecha
+                          ? "border-red bg-red text-surface"
+                          : "border-separator bg-surface"
+                      }`}
                     >
-                      {hecha ? <Check className="h-5 w-5" aria-hidden /> : <span className="h-4 w-4 rounded border border-current" aria-hidden />}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-[16px] font-medium ${hecha ? "text-ink-muted line-through" : "text-ink"}`}>{t.titulo}</p>
-                      {t.descripcion ? <p className="mt-1 text-[14px] text-ink-muted">{t.descripcion}</p> : null}
-                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-ink-muted">
-                        <span>{t.asignada_nombre ? `Asignada a ${t.asignada_nombre}` : "Tarea general"}</span>
-                        {hecha && t.completada_nombre && t.completada_en ? <span className="text-ok">{textoHechaPor(t.completada_nombre, t.completada_en)}</span> : null}
-                      </div>
+                      {bloqueada ? (
+                        <Lock size={14} strokeWidth={1.75} aria-hidden />
+                      ) : hecha ? (
+                        <Check size={16} strokeWidth={2.25} aria-hidden />
+                      ) : null}
+                    </span>
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`text-[17px] font-medium ${
+                        hecha ? "text-label-2 line-through" : "text-label"
+                      }`}
+                    >
+                      {t.titulo}
+                    </p>
+                    {t.descripcion ? (
+                      <p className="mt-1 line-clamp-2 text-[15px] text-label-2">
+                        {t.descripcion}
+                      </p>
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-[13px] text-label-2">
+                        {t.asignada_nombre ? `Para ${t.asignada_nombre}` : "General"}
+                      </span>
+                      {hechaPor ? (
+                        <span className="text-[13px] text-label-2">{hechaPor}</span>
+                      ) : null}
                     </div>
-                    {(puedeEditar || puedeBorrar) ? (
-                      <div className="flex shrink-0 items-center gap-1">
-                        {puedeEditar ? (
-                          <button type="button" onClick={() => abrirEditar(t)} aria-label={`Editar "${t.titulo}"`} className="inline-flex h-11 w-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-surface-hover hover:text-ink">
-                            <Pencil className="h-4 w-4" aria-hidden />
-                          </button>
-                        ) : null}
-                        {puedeBorrar ? (
-                          <button type="button" onClick={() => void onBorrar(t)} disabled={cargandoId === t.id} aria-label={`Borrar "${t.titulo}"`} className="inline-flex h-11 w-11 items-center justify-center rounded-[10px] text-ink-muted hover:bg-fire-light hover:text-fire disabled:opacity-50">
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </button>
-                        ) : null}
-                      </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    {hecha && puedeDeshacer ? (
+                      <button
+                        type="button"
+                        onClick={() => void toggleHecha(t)}
+                        disabled={cargandoId === t.id}
+                        className="tap min-h-11 rounded-[14px] px-2 text-[13px] font-semibold text-red transition-colors duration-200 disabled:text-label-2 disabled:bg-surface-2"
+                      >
+                        Deshacer
+                      </button>
+                    ) : null}
+                    {esOficial ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => abrirEditar(t)}
+                          aria-label={`Editar "${t.titulo}"`}
+                          className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition-colors hover:bg-surface-2 hover:text-label"
+                        >
+                          <Pencil size={22} strokeWidth={1.75} aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBorrando(t)}
+                          aria-label={`Borrar "${t.titulo}"`}
+                          className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition-colors hover:bg-red-tint hover:text-red"
+                        >
+                          <Trash2 size={22} strokeWidth={1.75} aria-hidden />
+                        </button>
+                      </>
                     ) : null}
                   </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </Grupo>
         )}
-      </DashboardCard>
+      </div>
 
-      <Hoja open={hojaAbierta} onClose={() => { if (!isPending) { setHojaAbierta(false); setEditando(null); } }} title={editando ? "Editar tarea" : "Nueva tarea"}>
+      <Hoja
+        open={hojaAbierta}
+        onClose={cerrarFormulario}
+        title={editando ? "Editar tarea" : "Nueva tarea"}
+      >
         <form action={onSubmit} className="space-y-4">
-          <Input id="titulo" name="titulo" label="Título" required defaultValue={editando?.titulo ?? ""} maxLength={120} />
-          <Textarea id="descripcion" name="descripcion" label="Descripción (opcional)" defaultValue={editando?.descripcion ?? ""} rows={3} maxLength={500} />
-          <Select id="asignada_a" name="asignada_a" label="Asignar a (opcional)" defaultValue={editando?.asignada_a ?? ""}>
+          <Input
+            id="titulo"
+            name="titulo"
+            label="Título"
+            required
+            defaultValue={editando?.titulo ?? ""}
+            maxLength={120}
+          />
+          <Textarea
+            id="descripcion"
+            name="descripcion"
+            label="Descripción (opcional)"
+            defaultValue={editando?.descripcion ?? ""}
+            rows={3}
+            maxLength={500}
+          />
+          <Select
+            id="asignada_a"
+            name="asignada_a"
+            label="Asignar a (opcional)"
+            defaultValue={editando?.asignada_a ?? ""}
+          >
             <option value="">Tarea general (sin asignar)</option>
-            {bomberos.map((b) => <option key={b.id} value={b.id}>{b.nombre_completo}</option>)}
+            {bomberos.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nombre_completo}
+              </option>
+            ))}
           </Select>
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => { setHojaAbierta(false); setEditando(null); }} className="min-h-11 rounded-[10px] px-4 text-[16px] font-medium text-ink-muted hover:bg-surface-hover">Cancelar</button>
-            <button type="submit" disabled={isPending} className="min-h-11 rounded-[10px] bg-fire px-4 text-[16px] font-medium text-ink hover:bg-fire-dark disabled:opacity-50">
-              {isPending ? "Guardando..." : editando ? "Guardar cambios" : "Crear tarea"}
-            </button>
+          <div className="flex flex-col-reverse gap-2 pt-1">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isPending}
+            >
+              {isPending ? "Guardando…" : "Guardar"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={cerrarFormulario}
+            >
+              Cancelar
+            </Button>
           </div>
         </form>
       </Hoja>
-    </div>
+
+      <Hoja
+        open={hojaBloqueo !== null}
+        onClose={() => setHojaBloqueo(null)}
+        title="No podés marcar esta tarea"
+        footer={
+          <Button className="w-full" onClick={() => setHojaBloqueo(null)}>
+            Entendido
+          </Button>
+        }
+      >
+        <div className="space-y-2">
+          <p>La puede marcar quien está de guardia ahora.</p>
+          <p className="text-[15px] text-label-2">{hojaBloqueo?.motivo}</p>
+        </div>
+      </Hoja>
+
+      <Hoja
+        open={borrando !== null}
+        onClose={() => setBorrando(null)}
+        title="Borrar tarea"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setBorrando(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="danger"
+              className="w-full"
+              onClick={() => void confirmarBorrar()}
+            >
+              Borrar
+            </Button>
+          </div>
+        }
+      >
+        <p>¿Borrar «{borrando?.titulo}»? Esta acción no se puede deshacer.</p>
+      </Hoja>
+
+      {toastTexto ? (
+        <div
+          role="status"
+          className="no-print fixed inset-x-4 bottom-6 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-label px-5 py-3 text-[15px] font-medium text-surface animate-fade-in"
+        >
+          {toastTexto}
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -28,7 +28,7 @@ function etiquetaCategoria(cat: CategoriaBiblioteca): string { return CATEGORIAS
 function esPrevisualizable(mime: string): boolean { const tipo = tipoDocumentoDesdeMime(mime); return tipo === "pdf" || tipo === "imagen"; }
 function IconoTipo({ mime }: { mime: string }) {
   const tipo = pillTipoDocumento(mime);
-  const base = "flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]";
+  const base = "flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]";
   if (tipo === "pdf") return <span className={`${base} bg-red-tint text-red`}><FileText size={22} strokeWidth={1.75} aria-hidden /></span>;
   if (tipo === "imagen") return <span className={`${base} bg-yellow-tint text-yellow-ink`}><ImageIcon size={22} strokeWidth={1.75} aria-hidden /></span>;
   if (tipo === "word" || tipo === "excel") {
@@ -138,11 +138,11 @@ export function BibliotecaClient({ inicial, cargaError, sessionId, sessionNombre
                         {guardado ? <span className="mt-0.5 block text-[13px] text-green-ink">Guardado sin conexión</span> : null}
                       </span>
                     </button>
-                    <button type="button" onClick={() => descargarDirecto(doc)} aria-label={`Descargar ${doc.titulo}`} className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] text-label-2 hover:bg-surface-2"><Download size={22} strokeWidth={1.75} aria-hidden /></button>
+                    <button type="button" onClick={() => descargarDirecto(doc)} aria-label={`Descargar ${doc.titulo}`} className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2"><Download size={22} strokeWidth={1.75} aria-hidden /></button>
                     <div className="relative" data-menu-biblioteca>
-                      <button type="button" onClick={() => setMenuId(menuAbierto ? null : doc.id)} aria-label={`Más acciones para ${doc.titulo}`} aria-expanded={menuAbierto} className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] text-label-2 hover:bg-surface-2"><Ellipsis size={22} strokeWidth={1.75} aria-hidden /></button>
+                      <button type="button" onClick={() => setMenuId(menuAbierto ? null : doc.id)} aria-label={`Más acciones para ${doc.titulo}`} aria-expanded={menuAbierto} className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-label-2 hover:bg-surface-2"><Ellipsis size={22} strokeWidth={1.75} aria-hidden /></button>
                       {menuAbierto ? (
-                        <div className="absolute right-0 top-12 z-20 min-w-[220px] overflow-hidden rounded-[16px] border border-separator bg-surface shadow-[0_8px_24px_rgba(0,0,0,.08)]">
+                        <div className="absolute right-0 top-12 z-20 min-w-[220px] overflow-hidden rounded-[16px] border border-separator bg-surface shadow-[0_1px_2px_rgba(0,0,0,.04)]">
                           <button type="button" onClick={() => { alternarOffline(doc); setMenuId(null); }} className="tap flex w-full min-h-[44px] items-center gap-3 px-4 text-left text-[17px] text-label hover:bg-surface-2"><WifiOff size={22} strokeWidth={1.75} aria-hidden />{guardado ? "Quitar sin conexión" : "Guardar sin conexión"}</button>
                           {puedeBorrar ? <button type="button" onClick={() => { setMenuId(null); void eliminar(doc); }} className="tap flex w-full min-h-[44px] items-center gap-3 border-t border-separator px-4 text-left text-[17px] text-red hover:bg-red-tint"><Trash2 size={22} strokeWidth={1.75} aria-hidden />Borrar</button> : null}
                         </div>
@@ -207,7 +207,7 @@ function SubirDocumentoHoja({ onCerrar, onSubido }: { onCerrar: () => void; onSu
       <div className="space-y-4">
         <div className="flex flex-col gap-2">
           <span className="text-[15px] text-label-2">Archivo</span>
-          <button type="button" onClick={() => inputRef.current?.click()} disabled={subiendo} className="tap flex h-[120px] w-full flex-col items-center justify-center gap-2 rounded-[16px] border border-dashed border-separator bg-surface-2 px-4 text-center text-label-2 hover:bg-surface disabled:opacity-50">
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={subiendo} className="tap flex h-[120px] w-full flex-col items-center justify-center gap-2 rounded-[16px] border border-dashed border-separator bg-surface-2 px-4 text-center text-label-2 hover:bg-surface disabled:text-label-2 disabled:bg-surface-2">
             <Upload size={22} strokeWidth={1.75} aria-hidden />
             <span className="text-[17px] font-medium text-label">{archivo ? archivo.name : "Elegir archivo"}</span>
             <span className="text-[13px] text-label-2">{archivo ? formatearTamanoDocumento(archivo.size) : "PDF, imagen, Word o Excel. Máximo 20 MB."}</span>

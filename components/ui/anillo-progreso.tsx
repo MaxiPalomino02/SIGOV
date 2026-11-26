@@ -50,7 +50,7 @@ export function AnilloProgreso({
           y="54"
           textAnchor="middle"
           dominantBaseline="middle"
-          className="num fill-label text-[20px] font-bold"
+          className="num fill-label text-[22px] font-bold"
         >
           {porcentaje}%
         </text>

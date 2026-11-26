@@ -29,7 +29,7 @@ export function Buscador({
         onChange={(evento) => onChange(evento.target.value)}
         placeholder={placeholder}
         aria-label={etiqueta}
-        className="min-h-[50px] w-full rounded-full bg-surface-2 pl-12 pr-4 text-[17px] text-label placeholder:text-label-3 focus:outline-2 focus:outline-offset-2 focus:outline-red"
+        className="min-h-[50px] w-full rounded-full bg-surface-2 pl-12 pr-4 text-[17px] text-label placeholder:text-label-2 focus:outline-2 focus:outline-offset-2 focus:outline-red"
       />
     </div>
   );

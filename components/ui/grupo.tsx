@@ -10,7 +10,7 @@ export function Grupo({ titulo, children, className = "" }: GrupoProps) {
   return (
     <section className={className}>
       {titulo ? (
-        <h2 className="mb-2 px-1 text-[13px] font-medium tracking-[.3px] text-label-2 uppercase">
+        <h2 className="mb-2 px-1 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">
           {titulo}
         </h2>
       ) : null}

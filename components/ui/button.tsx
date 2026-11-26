@@ -9,7 +9,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const baseClasses =
-  "tap inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-[14px] font-semibold leading-none transition-all duration-200 ease-[cubic-bezier(.2,.8,.2,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red disabled:pointer-events-none disabled:opacity-50";
+  "tap inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap rounded-[14px] font-semibold leading-none transition-all duration-200 ease-[cubic-bezier(.2,.8,.2,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red disabled:pointer-events-none disabled:text-label-2 disabled:bg-surface-2";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-red text-surface hover:bg-red-pressed",

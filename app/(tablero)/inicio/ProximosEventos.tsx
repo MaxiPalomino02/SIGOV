@@ -1,9 +1,8 @@
-﻿import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
+﻿import { Fila } from "@/components/ui/fila";
+import { Grupo } from "@/components/ui/grupo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatFechaKey } from "@/lib/tablero";
-import { formatearHoraEvento, ETIQUETAS_TIPO, type Evento, type TipoEvento } from "@/lib/eventos";
+import { ETIQUETAS_TIPO, formatearHoraEvento, type Evento, type TipoEvento } from "@/lib/eventos";
 
 export async function ProximosEventos({ limite = 3 }: { limite?: number }) {
   const { createSupabaseClient } = await import("@/lib/supabase");
@@ -18,45 +17,33 @@ export async function ProximosEventos({ limite = 3 }: { limite?: number }) {
     .limit(limite);
 
   if (error) return null;
-  const eventos = (data ?? []).filter((e: Evento) => e.id && e.titulo && e.tipo && e.inicio && e.fin);
+  const eventos = (data ?? []).filter(
+    (e: Evento) => e.id && e.titulo && e.tipo && e.inicio && e.fin,
+  );
   if (eventos.length === 0) return null;
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="titulo-tarjeta">Próximos eventos</h2>
-      </div>
-      <ul className="mt-3 divide-y divide-line-subtle">
-        {eventos.map((ev) => {
-          const tipo = ev.tipo as TipoEvento;
-          return (
-            <li key={ev.id} className="py-2.5 first:pt-0 last:pb-0">
-              <p className="text-[16px] text-ink">{ev.titulo}</p>
-              <p className="texto-aux mt-0.5">
-                {ETIQUETAS_TIPO[tipo]} · {formatFechaKey(ev.inicio.split("T")[0])} · {formatearHoraEvento(ev.inicio)} - {formatearHoraEvento(ev.fin)}
-              </p>
-              {ev.lugar ? <p className="texto-aux">{ev.lugar}</p> : null}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-3">
-        <Link href="/calendario" className="inline-flex min-h-11 items-center gap-1 whitespace-nowrap text-[16px] font-medium text-fire hover:underline">
-          Ver calendario <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-        </Link>
-      </div>
-    </Card>
+    <Grupo titulo="Próximos eventos">
+      {eventos.map((ev) => {
+        const tipo = ev.tipo as TipoEvento;
+        const subtitulo = `${ETIQUETAS_TIPO[tipo]} · ${formatFechaKey(ev.inicio.split("T")[0])} · ${formatearHoraEvento(ev.inicio)} - ${formatearHoraEvento(ev.fin)}${ev.lugar ? ` · ${ev.lugar}` : ""}`;
+        return <Fila key={ev.id} titulo={ev.titulo} subtitulo={subtitulo} />;
+      })}
+    </Grupo>
   );
 }
 
 export function SkeletonProximosEventos() {
   return (
-    <Card className="p-5">
-      <Skeleton className="h-5 w-36" />
-      <div className="mt-4 space-y-3">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-    </Card>
+    <Grupo titulo="Próximos eventos">
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="fila flex items-center gap-3 px-4 py-3">
+          <span className="min-w-0 flex-1">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="mt-2 h-3 w-56 max-w-full" />
+          </span>
+        </div>
+      ))}
+    </Grupo>
   );
 }

@@ -47,8 +47,6 @@ import {
   ESTADOS_ITEM,
   ETIQUETAS_TIPO,
   ETIQUETAS_ESTADO_ITEM,
-  COLORES_ESTADO_ITEM,
-  FONDOS_ESTADO_ITEM,
   type ChequeoPlantilla,
   type ChequeoItem,
   type Chequeo,
@@ -83,6 +81,18 @@ import {
 import { isOficial } from "@/lib/cargos";
 
 const FRANJAS: Franja[] = ["08:00-13:00", "13:00-18:00", "18:00-23:00", "23:00-08:00"];
+
+const COLORES_ESTADO_ITEM: Record<EstadoItem, string> = {
+  ok: "text-green-ink",
+  falta: "text-yellow-ink",
+  danado: "text-red",
+};
+
+const FONDOS_ESTADO_ITEM: Record<EstadoItem, string> = {
+  ok: "bg-green-tint border-green",
+  falta: "bg-yellow-tint border-yellow",
+  danado: "bg-red-tint border-red",
+};
 
 type ChequeoClientProps = {
   oficial: boolean;
@@ -486,7 +496,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
           >
             <div className="space-y-4">
                 <div className="space-y-2">
-                  <span className="text-[14px] font-semibold text-ink">Plantilla</span>
+                  <span className="text-[15px] font-semibold text-label">Plantilla</span>
                   <Select value={plantillaSeleccionada ?? ""} onChange={(e) => setPlantillaSeleccionada(e.target.value || null)}>
                     <option value="">Seleccionar plantilla</option>
                     {plantillas
@@ -501,7 +511,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <span className="text-[14px] font-semibold text-ink">Fecha</span>
+                    <span className="text-[15px] font-semibold text-label">Fecha</span>
                     <Input
                       type="date"
                       value={fechaEjecutar}
@@ -510,7 +520,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <span className="text-[14px] font-semibold text-ink">Franja</span>
+                    <span className="text-[15px] font-semibold text-label">Franja</span>
                     <Select value={franjaEjecutar} onChange={(e) => setFranjaEjecutar(e.target.value as Franja)}>
                       {FRANJAS.map((f) => (
                         <option key={f} value={f}>{formatearFranja(f)}</option>
@@ -520,8 +530,8 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                 </div>
 
                 {chequeoId && (
-                  <div className="rounded-lg border border-ok/40 bg-ok/10 p-3 text-[14px] text-ok">
-                    Chequeo iniciado. ID: <code className="font-mono text-[13px]">{chequeoId.slice(0, 8)}...</code>
+                  <div className="rounded-[16px] border border-green bg-green-tint p-3 text-[15px] text-green-ink">
+                    Chequeo iniciado. ID: <code className="num text-[13px]">{chequeoId.slice(0, 8)}...</code>
                   </div>
                 )}
               </div>
@@ -536,44 +546,44 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
 
               {itemsLoading ? (
                 <div className="space-y-3" aria-busy="true">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-[16px]" />)}
                 </div>
               ) : items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
+                <div className="flex flex-col items-center justify-center gap-2 rounded-[16px] border border-separator bg-surface-2 px-4 py-8 text-center text-label-2">
                   <Lucide.ClipboardList className="h-8 w-8" aria-hidden />
-                  <p className="text-[14px]">No hay items en esta plantilla.</p>
+                  <p className="text-[15px]">No hay items en esta plantilla.</p>
                 </div>
               ) : (
                 <>
                   {Array.from(agruparItemsPorGrupo(items).entries()).map(([grupo, itemsGrupo]) => (
                     <div key={grupo} className="space-y-2">
-                      <h4 className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">{grupo}</h4>
+                      <h4 className="text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">{grupo}</h4>
                       {itemsGrupo.map((item) => {
                         const resultado = resultados.get(item.id);
                         const estadoActual = resultado?.estado ?? "ok";
                         return (
                           <div
                             key={item.id}
-                            className={`rounded-xl border p-3 transition-colors hover:bg-surface-hover ${FONDOS_ESTADO_ITEM[estadoActual]} ${COLORES_ESTADO_ITEM[estadoActual]}`}
+                            className={`rounded-[16px] border p-3 transition-colors duration-200 hover:bg-surface-2 ${FONDOS_ESTADO_ITEM[estadoActual]} ${COLORES_ESTADO_ITEM[estadoActual]}`}
                           >
                             <div className="flex items-start gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-ink">{item.nombre}</p>
+                                <p className="font-semibold text-label">{item.nombre}</p>
                                 {resultado?.nota && (
-                                  <p className="mt-1 text-[13px] text-ink-muted">{resultado.nota}</p>
+                                  <p className="mt-1 text-[13px] text-label-2">{resultado.nota}</p>
                                 )}
                                 {resultado?.foto_path && (
                                   <a
                                     href={resultado.foto_path}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="mt-1 inline-flex items-center gap-1 text-[13px] font-mono text-fire-text hover:underline"
+                                    className="mt-1 inline-flex items-center gap-1 text-[13px] text-red hover:underline"
                                   >
                                     <Lucide.Image className="h-3 w-3" /> Ver foto
                                   </a>
                                 )}
                                 {item.equipo ? (
-                                  <p className="mt-1 font-mono text-[13px] text-ink-secondary">
+                                  <p className="num mt-1 text-[13px] text-label-2">
                                     Equipo: {item.equipo.codigo} - {item.equipo.nombre}
                                   </p>
                                 ) : null}
@@ -648,10 +658,10 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                     </div>
                   ))}
 
-                  <div className="mt-4 pt-4 border-t border-line">
+                  <div className="mt-4 pt-4 border-t border-separator">
                     <div className="flex flex-col sm:flex-row gap-3">
                       <div className="space-y-2 flex-1">
-                        <span className="text-[14px] font-semibold text-ink">Observaciones generales</span>
+                        <span className="text-[15px] font-semibold text-label">Observaciones generales</span>
                         <Textarea
                           value={observaciones}
                           onChange={(e) => setObservaciones(e.target.value)}
@@ -682,7 +692,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
             descripcion="Seleccioná una fecha para ver los chequeos realizados."
           >
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-[14px] font-semibold text-ink shrink-0">Fecha</span>
+              <span className="text-[15px] font-semibold text-label shrink-0">Fecha</span>
               <Input
                 type="date"
                 value={historialFecha}
@@ -696,31 +706,31 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
 
             {historialLoading ? (
               <div className="space-y-3" aria-busy="true">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-[16px]" />)}
               </div>
             ) : historial.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-[16px] border border-separator bg-surface-2 px-4 py-8 text-center text-label-2">
                 <Lucide.FileText className="h-8 w-8" aria-hidden />
-                <p className="text-[14px]">No hay chequeos en esta fecha.</p>
+                <p className="text-[15px]">No hay chequeos en esta fecha.</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {historial.map((c) => (
                   <div
                     key={c.id}
-                    className={`rounded-xl border p-3 transition-colors hover:bg-surface-hover ${
-                      c.estado === "completo" ? "border-ok/40 bg-ok/10" : "border-alarm/40 bg-alarm/10"
+                    className={`rounded-[16px] border p-3 transition-colors duration-200 hover:bg-surface-2 ${
+                      c.estado === "completo" ? "border-green bg-green-tint" : "border-red bg-red-tint"
                     }`}
                     onClick={() => handleAbrirDetalle(c.id)}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line-subtle bg-bg-subtle">
-                          <Lucide.ClipboardList className="h-5 w-5 text-ink-muted" aria-hidden />
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-separator bg-surface-2">
+                          <Lucide.ClipboardList className="h-5 w-5 text-label-2" aria-hidden />
                         </span>
                         <div>
-                          <p className="font-semibold text-ink">{c.plantilla_nombre}</p>
-                          <p className="font-mono text-[13px] text-ink-muted">
+                          <p className="font-semibold text-label">{c.plantilla_nombre}</p>
+                          <p className="num text-[13px] text-label-2">
                             {ETIQUETAS_TIPO[c.plantilla_tipo!]} · {c.bombero_nombre} · {formatearFranja(c.franja)}
                           </p>
                         </div>
@@ -731,7 +741,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                           className="text-[13px]"
                         />
                         {c.fallas_count && c.fallas_count > 0 && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-alarm/40 bg-alarm/10 px-2 py-0.5 font-mono text-[13px] font-bold text-alarm">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-red bg-red-tint px-2 py-0.5 num text-[13px] font-bold text-red">
                             <AlertTriangle className="h-3 w-3" /> {c.fallas_count} fallas
                           </span>
                         )}
@@ -757,31 +767,31 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
 
             {fallasLoading ? (
               <div className="space-y-3" aria-busy="true">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-[16px]" />)}
               </div>
             ) : fallas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-ok/40 bg-ok/10 px-4 py-8 text-center text-ok">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-[16px] border border-green bg-green-tint px-4 py-8 text-center text-green-ink">
                 <Lucide.CheckCircle2 className="h-8 w-8" aria-hidden />
-                <p className="text-[14px] font-semibold">¡No hay fallas hoy!</p>
-                <p className="text-[13px] text-ok/80">Todos los chequeos completados sin novedades.</p>
+                <p className="text-[15px] font-semibold">¡No hay fallas hoy!</p>
+                <p className="text-[13px] text-green-ink">Todos los chequeos completados sin novedades.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {fallas.map((c) => (
-                  <div key={c.id} className="rounded-xl border border-alarm/40 bg-alarm/10 p-3">
+                  <div key={c.id} className="rounded-[16px] border border-red bg-red-tint p-3">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-alarm/40 bg-alarm/10">
-                          <AlertTriangle className="h-5 w-5 text-alarm" aria-hidden />
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-red bg-red-tint">
+                          <AlertTriangle className="h-5 w-5 text-red" aria-hidden />
                         </span>
                         <div>
-                          <p className="font-semibold text-ink">{c.plantilla_nombre}</p>
-                          <p className="font-mono text-[13px] text-ink-muted">
+                          <p className="font-semibold text-label">{c.plantilla_nombre}</p>
+                          <p className="num text-[13px] text-label-2">
                             {ETIQUETAS_TIPO[c.plantilla_tipo!]} · {c.bombero_nombre} · {formatearFranja(c.franja)}
                           </p>
                         </div>
                       </div>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-alarm/40 bg-alarm/10 px-2 py-0.5 font-mono text-[13px] font-bold text-alarm">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-red bg-red-tint px-2 py-0.5 num text-[13px] font-bold text-red">
                         <AlertTriangle className="h-3 w-3" /> {c.fallas_count} fallas
                       </span>
                     </div>
@@ -804,7 +814,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
             {plantillasError && <Aviso variante="error" className="mb-4">{plantillasError}</Aviso>}
 
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">Tipo</span>
+              <span className="text-[13px] text-label-2">Tipo</span>
               <Select value={tipoFiltro} onChange={(e) => setTipoFiltro(e.target.value as TipoChequeo | "todos")}>
                 <option value="todos">Todos</option>
                 <option value="apertura">Apertura</option>
@@ -814,35 +824,35 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
 
             {plantillasLoading ? (
                 <div className="space-y-3" aria-busy="true">
-                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+                  {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-[16px]" />)}
                 </div>
               ) : plantillas.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
+                <div className="flex flex-col items-center justify-center gap-2 rounded-[16px] border border-separator bg-surface-2 px-4 py-8 text-center text-label-2">
                   <Lucide.Settings className="h-8 w-8" aria-hidden />
-                  <p className="text-[14px]">No hay plantillas. Creá una para empezar.</p>
+                  <p className="text-[15px]">No hay plantillas. Creá una para empezar.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {plantillas.map((p) => (
                     <div
                       key={p.id}
-                      className={`flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors hover:bg-surface-hover ${
-                        p.activa ? "bg-surface" : "bg-bg-subtle"
+                      className={`flex items-center justify-between gap-3 rounded-[16px] border p-3 transition-colors duration-200 hover:bg-surface-2 ${
+                        p.activa ? "bg-surface" : "bg-surface-2"
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
-                          p.tipo === "apertura" ? "border-brass/40 bg-brass/10 text-brass" : "border-alarm/40 bg-alarm/10 text-alarm"
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border ${
+                          p.tipo === "apertura" ? "border-yellow bg-yellow-tint text-yellow-ink" : "border-red bg-red-tint text-red"
                         }`}>
                           {p.tipo === "apertura" ? <Lucide.Sunrise className="h-5 w-5" /> : <Lucide.Sunset className="h-5 w-5" />}
                         </span>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold text-ink truncate">{p.nombre}</p>
+                            <p className="font-semibold text-label truncate">{p.nombre}</p>
                             <Badge cargo={p.tipo === "apertura" ? "Oficial Principal" : "Oficial Ayudante"} />
-                            {!p.activa && <span className="font-mono text-[13px] uppercase tracking-wider text-ink-secondary">Inactiva</span>}
+                            {!p.activa && <span className="text-[13px] text-label-2">Inactiva</span>}
                           </div>
-                          <p className="mt-1 font-mono text-[13px] text-ink-secondary">
+                          <p className="num mt-1 text-[13px] text-label-2">
                             ID: <code>{p.id.slice(0, 8)}...</code>
                           </p>
                         </div>
@@ -852,7 +862,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => borrarPlantillaConfirm(p.id)} aria-label="Borrar">
-                          <Trash2 className="h-4 w-4 text-fire-text" />
+                          <Trash2 className="h-4 w-4 text-red" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => setPlantillaSeleccionada(p.id)} aria-label="Ver items">
                           <Lucide.List className="h-4 w-4" />
@@ -870,32 +880,32 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                 descripcion="Gestioná los items. Usá los botones para editar/borrar. Reordenar próximamente."
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="heading-display text-base text-ink">Items</h4>
+                  <h4 className="text-[22px] font-bold text-label">Items</h4>
                   <QuickAction icono={Plus} titulo="Nuevo item" onClick={abrirCrearItem} />
                 </div>
 
                 {items.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-line-subtle bg-bg-subtle px-4 py-8 text-center text-ink-muted">
+                  <div className="flex flex-col items-center justify-center gap-2 rounded-[16px] border border-separator bg-surface-2 px-4 py-8 text-center text-label-2">
                     <Lucide.ClipboardList className="h-8 w-8" aria-hidden />
-                    <p className="text-[14px]">No hay items. Agregá el primero.</p>
+                    <p className="text-[15px]">No hay items. Agregá el primero.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {Array.from(agruparItemsPorGrupo(items).entries()).map(([grupo, itemsGrupo]) => (
                       <div key={grupo} className="space-y-2">
-                        <h5 className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">{grupo || "General"}</h5>
+                        <h5 className="text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">{grupo || "General"}</h5>
                         {itemsGrupo.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
+                          <div key={item.id} className="flex items-center justify-between gap-3 rounded-[16px] border border-separator bg-surface p-3">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <span className="font-mono text-[13px] font-bold text-ink-muted">{item.orden}</span>
-                              <p className="font-semibold text-ink truncate">{item.nombre}</p>
+                              <span className="num text-[13px] font-bold text-label-2">{item.orden}</span>
+                              <p className="font-semibold text-label truncate">{item.nombre}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <Button variant="ghost" size="sm" onClick={() => abrirEditarItem(item)} aria-label="Editar">
                                 <Edit2 className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => borrarItemConfirm(item.id)} aria-label="Borrar">
-                                <Trash2 className="h-4 w-4 text-fire-text" />
+                                <Trash2 className="h-4 w-4 text-red" />
                               </Button>
                             </div>
                           </div>
@@ -919,23 +929,23 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); guardarPlantilla(); }}>
             {errorEjecutar && <Aviso variante="error">{errorEjecutar}</Aviso>}
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Nombre *</span>
+              <span className="text-[15px] font-semibold text-label">Nombre *</span>
               <Input value={formPlantilla.nombre} onChange={(e) => setFormPlantilla({ ...formPlantilla, nombre: e.target.value })} placeholder="Ej: Chequeo apertura móvil 1" maxLength={120} required />
             </div>
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Tipo *</span>
+              <span className="text-[15px] font-semibold text-label">Tipo *</span>
               <Select value={formPlantilla.tipo} onChange={(e) => setFormPlantilla({ ...formPlantilla, tipo: e.target.value as TipoChequeo })}>
                 <option value="apertura">Apertura</option>
                 <option value="cierre">Cierre</option>
               </Select>
             </div>
             <div className="space-y-2">
-              <span className="flex items-center gap-2 text-[14px] font-semibold text-ink">
+              <span className="flex items-center gap-2 text-[15px] font-semibold text-label">
                 <input type="checkbox" checked={formPlantilla.activa} onChange={(e) => setFormPlantilla({ ...formPlantilla, activa: e.target.checked })} className="h-4 w-4" />
                 Activa
               </span>
             </div>
-            <div className="flex gap-3 pt-2 border-t border-line">
+            <div className="flex gap-3 pt-2 border-t border-separator">
               <Button type="submit" className="flex-1" disabled={ejecutando}>
                 {ejecutando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
               </Button>
@@ -955,19 +965,19 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); guardarItem(); }}>
             {errorEjecutar && <Aviso variante="error">{errorEjecutar}</Aviso>}
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Nombre *</span>
+              <span className="text-[15px] font-semibold text-label">Nombre *</span>
               <Input value={formItem.nombre} onChange={(e) => setFormItem({ ...formItem, nombre: e.target.value })} placeholder="Ej: Extintor carga completa" maxLength={120} required />
             </div>
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Grupo</span>
+              <span className="text-[15px] font-semibold text-label">Grupo</span>
               <Input value={formItem.grupo} onChange={(e) => setFormItem({ ...formItem, grupo: e.target.value })} placeholder="Ej: Móvil 1, Compartimiento A" maxLength={80} />
             </div>
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Orden</span>
+              <span className="text-[15px] font-semibold text-label">Orden</span>
               <Input type="number" min="0" value={formItem.orden} onChange={(e) => setFormItem({ ...formItem, orden: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Equipo vinculado (opcional)</span>
+              <span className="text-[15px] font-semibold text-label">Equipo vinculado (opcional)</span>
               <Select value={formItem.equipoId} onChange={(e) => setFormItem({ ...formItem, equipoId: e.target.value })}>
                 <option value="">Sin equipo</option>
                 {equiposOpciones.map((eq) => (
@@ -977,7 +987,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                 ))}
               </Select>
             </div>
-            <div className="flex gap-3 pt-2 border-t border-line">
+            <div className="flex gap-3 pt-2 border-t border-separator">
               <Button type="submit" className="flex-1" disabled={ejecutando}>
                 {ejecutando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
               </Button>
@@ -997,7 +1007,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); guardarNota(); }}>
             {errorEjecutar && <Aviso variante="error">{errorEjecutar}</Aviso>}
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Nota (requerida)</span>
+              <span className="text-[15px] font-semibold text-label">Nota (requerida)</span>
               <Textarea
                 value={notaTexto}
                 onChange={(e) => setNotaTexto(e.target.value)}
@@ -1007,7 +1017,7 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                 autoFocus
               />
             </div>
-            <div className="flex gap-3 pt-2 border-t border-line">
+            <div className="flex gap-3 pt-2 border-t border-separator">
               <Button type="submit" className="flex-1" disabled={ejecutando || !notaTexto.trim()}>
                 {ejecutando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
               </Button>
@@ -1041,11 +1051,11 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
             }}
           >
             {errorEjecutar ? <Aviso variante="error">{errorEjecutar}</Aviso> : null}
-            <p className="text-[14px] text-ink">
+            <p className="text-[15px] text-label">
               Equipo: <span className="font-semibold">{marcarReparacion?.equipoNombre}</span>
             </p>
             <div className="space-y-2">
-              <span className="text-[14px] font-semibold text-ink">Nota *</span>
+              <span className="text-[15px] font-semibold text-label">Nota *</span>
               <Textarea
                 value={marcarReparacion?.nota ?? ""}
                 onChange={(e) =>
@@ -1056,10 +1066,10 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
                 required
               />
             </div>
-            <p className="text-[13px] text-ink-muted">
+            <p className="text-[13px] text-label-2">
               Esta acción queda registrada en el historial del equipo.
             </p>
-            <div className="flex gap-3 pt-2 border-t border-line">
+            <div className="flex gap-3 pt-2 border-t border-separator">
               <Button type="submit" className="flex-1" disabled={ejecutando || !marcarReparacion?.nota.trim()}>
                 {ejecutando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar"}
               </Button>
@@ -1079,28 +1089,28 @@ export function ChequeoClient({ oficial }: ChequeoClientProps) {
         >
           {detalleLoading ? (
             <div className="space-y-3" aria-busy="true">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-[16px]" />)}
             </div>
           ) : (
             <div className="space-y-2">
               {Array.from(agruparItemsPorGrupo(detalleItems.map((d) => ({ id: d.item_id, nombre: d.item_nombre!, grupo: d.item_grupo!, orden: d.item_orden! } as ChequeoItem))).entries()).map(([grupo, itemsGrupo]) => (
                 <div key={grupo} className="space-y-2">
-                  <h5 className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">{grupo || "General"}</h5>
+                  <h5 className="text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">{grupo || "General"}</h5>
                   {itemsGrupo.map((item) => {
                     const res = detalleItems.find((d) => d.item_id === item.id);
                     const estado = res?.estado ?? "ok";
                     return (
-                      <div key={item.id} className={`rounded-lg border p-3 ${FONDOS_ESTADO_ITEM[estado]} ${COLORES_ESTADO_ITEM[estado]}`}>
+                      <div key={item.id} className={`rounded-[16px] border p-3 ${FONDOS_ESTADO_ITEM[estado]} ${COLORES_ESTADO_ITEM[estado]}`}>
                         <div className="flex items-center justify-between gap-2">
                           <div>
-                            <p className="font-semibold text-ink">{item.nombre}</p>
-                            <p className="font-mono text-[13px] text-ink-muted">
+                            <p className="font-semibold text-label">{item.nombre}</p>
+                            <p className="num text-[13px] text-label-2">
                               {ETIQUETAS_ESTADO_ITEM[estado]}
                               {res?.nota && ` — ${res.nota}`}
                             </p>
                           </div>
                           {res?.foto_path && (
-                            <a href={res.foto_path} target="_blank" rel="noopener noreferrer" className="text-[13px] font-mono text-fire-text hover:underline">
+                            <a href={res.foto_path} target="_blank" rel="noopener noreferrer" className="text-[13px] text-red hover:underline">
                               <Lucide.Image className="h-3 w-3 inline" /> Foto
                             </a>
                           )}

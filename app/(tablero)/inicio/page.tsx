@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BannerAlarma } from "@/components/banner-alarma";
 import { BannerAlerta } from "@/components/banner-alerta";
+import { PageHeader } from "@/components/page-header";
 import { PRODUCTO } from "@/lib/marca";
 import { getSession } from "@/lib/session";
 import { isOficial } from "@/lib/cargos";
@@ -12,12 +13,12 @@ import {
   AccesosRapidos,
   ahoraTucuman,
   formatearFechaTucuman,
-  IndicadoresInicio,
   LineaHuecosOficial,
   ResumenAvisosInicio,
-  SkeletonIndicadoresInicio,
+  ResumenInicio,
   SkeletonLineaHuecos,
   SkeletonResumenAvisos,
+  SkeletonResumenInicio,
   SkeletonTuTurno,
   TuTurno,
 } from "./secciones";
@@ -33,14 +34,14 @@ async function contarAvisosNoLeidos(bomberoId: string): Promise<number> {
   try {
     const supabase = createSupabaseClient();
     const { data: avisos } = await supabase.from("avisos").select("id");
-    const ids = (avisos ?? []).map((a: any) => a.id);
+    const ids = (avisos ?? []).map((a: { id: string }) => a.id);
     if (ids.length === 0) return 0;
     const { data: lecturas } = await supabase
       .from("avisos_lecturas")
       .select("aviso_id")
       .eq("bombero_id", bomberoId)
       .in("aviso_id", ids);
-    const leidos = new Set((lecturas ?? []).map((l: any) => l.aviso_id));
+    const leidos = new Set((lecturas ?? []).map((l: { aviso_id: string }) => l.aviso_id));
     return ids.filter((id) => !leidos.has(id)).length;
   } catch {
     return 0;
@@ -58,26 +59,16 @@ export default async function InicioPage() {
   const avisosNoLeidos = await contarAvisosNoLeidos(session.bombero_id);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-      <div className="space-y-4">
-        <header className="flex flex-wrap items-end justify-between gap-2">
-          <h1 className="heading-display">Inicio</h1>
-          <p className="texto-aux">{formatearFechaTucuman(ahora)}</p>
-        </header>
-
-        <div className="flex min-h-11 items-center gap-2.5 rounded-[12px] border border-alarm-border bg-alarm-light px-4 py-2 text-[16px] text-ink">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-alarm animate-pulse" aria-hidden />
-          <span>
-            <span className="font-mono text-[12px] font-semibold uppercase tracking-wider text-alarm">Operativo</span>
-            <span className="ml-2">en servicio ahora</span>
-          </span>
+    <>
+      <PageHeader titulo={`Hola, ${session.nombre_completo}`} subtitulo={formatearFechaTucuman(ahora)} />
+      <div className="space-y-4 lg:space-y-6">
+        <div className="space-y-3">
+          <BannerAlarma />
+          <BannerAlerta />
         </div>
 
-        <BannerAlarma />
-        <BannerAlerta />
-
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+          <div className="space-y-4 lg:space-y-6">
             <Suspense fallback={<SkeletonTuTurno />}>
               <TuTurno
                 bomberoId={session.bombero_id}
@@ -86,36 +77,35 @@ export default async function InicioPage() {
                 franjaActualAhora={actual.franja}
               />
             </Suspense>
-          </div>
-          <div className="lg:col-span-1">
-            <Suspense fallback={<SkeletonIndicadoresInicio />}>
-              <IndicadoresInicio
+
+            <Suspense fallback={<SkeletonResumenInicio />}>
+              <ResumenInicio
                 bomberoId={session.bombero_id}
                 fechaActual={actual.fechaKey}
                 franjaActualAhora={actual.franja}
                 avisosNoLeidos={avisosNoLeidos}
               />
             </Suspense>
+
+            <AccesosRapidos oficial={oficial} />
+
+            {oficial ? (
+              <Suspense fallback={<SkeletonLineaHuecos />}>
+                <LineaHuecosOficial hoy={hoy} />
+              </Suspense>
+            ) : null}
+          </div>
+
+          <div className="space-y-4 lg:space-y-6">
+            <Suspense fallback={<SkeletonResumenAvisos />}>
+              <ResumenAvisosInicio bomberoId={session.bombero_id} />
+            </Suspense>
+            <Suspense fallback={<SkeletonProximosEventos />}>
+              <ProximosEventos />
+            </Suspense>
           </div>
         </div>
-
-        <AccesosRapidos />
-
-        {oficial ? (
-          <Suspense fallback={<SkeletonLineaHuecos />}>
-            <LineaHuecosOficial hoy={hoy} />
-          </Suspense>
-        ) : null}
-
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-          <Suspense fallback={<SkeletonResumenAvisos />}>
-            <ResumenAvisosInicio bomberoId={session.bombero_id} />
-          </Suspense>
-          <Suspense fallback={<SkeletonProximosEventos />}>
-            <ProximosEventos />
-          </Suspense>
-        </div>
       </div>
-    </div>
+    </>
   );
 }

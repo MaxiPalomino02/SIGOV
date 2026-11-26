@@ -35,7 +35,7 @@ export function Input({
         id={inputId}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
-        className={`min-h-[50px] w-full rounded-[14px] border border-separator bg-surface-2 px-4 text-[17px] text-label placeholder:text-label-3 transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+        className={`min-h-[50px] w-full rounded-[14px] border border-separator bg-surface-2 px-4 text-[17px] text-label placeholder:text-label-2 transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:text-label-2 disabled:bg-surface-2 ${className}`}
         {...props}
       />
       {hint ? (

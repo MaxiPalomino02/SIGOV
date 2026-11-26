@@ -34,7 +34,7 @@ export function LogoSigov({
   if (error) {
     return (
       <span
-        className={`heading-display inline-flex items-center justify-center leading-none tracking-[0.18em] text-ink ${className}`}
+        className={`inline-flex items-center justify-center text-[22px] font-bold leading-none tracking-[0.18em] text-label ${className}`}
         style={variante === "isotipo" ? { width, height } : undefined}
         aria-label={textoAlt}
       >
@@ -114,11 +114,11 @@ export function WordmarkSigov({
 }) {
   return (
     <span className={`inline-flex min-w-0 flex-col ${className}`}>
-      <span className="heading-display leading-none tracking-[0.18em] text-ink">
+      <span className="text-[22px] font-bold leading-none tracking-[0.18em] text-label">
         {PRODUCTO.nombre}
       </span>
       {mostrarDenominacion ? (
-        <span className="mt-1 font-mono text-[10px] uppercase leading-relaxed tracking-[0.12em] text-ink-muted">
+        <span className="mt-1 text-[13px] leading-relaxed text-label-2">
           {PRODUCTO.nombreCompleto}
         </span>
       ) : null}

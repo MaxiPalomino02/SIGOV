@@ -89,7 +89,7 @@ export function Hoja({ open, onClose, title, children, footer, className = "" }:
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
-        className={`relative flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-surface shadow-[0_-8px_32px_rgba(0,0,0,.12)] animate-sheet-up focus:outline-none sm:max-w-lg sm:rounded-[20px] sm:shadow-[0_8px_32px_rgba(0,0,0,.12)] sm:animate-fade-in ${className}`}
+        className={`relative flex max-h-[85dvh] w-full flex-col overflow-hidden rounded-t-[20px] bg-surface shadow-[0_1px_2px_rgba(0,0,0,.04)] animate-sheet-up focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red sm:max-w-lg sm:rounded-[20px] sm:shadow-[0_1px_2px_rgba(0,0,0,.04)] sm:animate-fade-in ${className}`}
       >
         <div aria-hidden className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-separator sm:hidden" />
         <header className="flex items-start justify-between gap-3 border-b border-separator px-5 py-4">

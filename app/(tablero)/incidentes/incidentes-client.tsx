@@ -693,7 +693,7 @@ export function IncidentesClient({
                 <ArrowLeft size={22} strokeWidth={1.75} aria-hidden />
               </button>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Nuevo incidente</p>
+                <p className="text-[13px] text-label-2">Nuevo incidente</p>
                 <p className="truncate text-[17px] font-semibold text-label">Paso {paso} de 4: {PASOS_INCIDENTE[paso - 1]?.label}</p>
               </div>
               {etiquetaGuardado ? (
@@ -762,8 +762,8 @@ export function IncidentesClient({
               {([{ value: "cargados" as const, label: "Cargados", count: cargados.length }, { value: "borradores" as const, label: "Borradores", count: borradores.length }]).map((tab) => {
                 const activo = filtro === tab.value;
                 return (
-                  <button key={tab.value} type="button" role="tab" aria-selected={activo} onClick={() => setFiltro(tab.value)} className={`tap min-h-[44px] flex-1 rounded-[10px] px-3 text-[15px] font-semibold transition-colors ${activo ? "bg-surface text-label shadow-[0_1px_2px_rgba(0,0,0,.04)]" : "text-label-2"}`}>
-                    {tab.label} <span className="num text-label-3">{tab.count}</span>
+                  <button key={tab.value} type="button" role="tab" aria-selected={activo} onClick={() => setFiltro(tab.value)} className={`tap min-h-[44px] flex-1 rounded-[14px] px-3 text-[15px] font-semibold transition-colors ${activo ? "bg-surface text-label shadow-[0_1px_2px_rgba(0,0,0,.04)]" : "text-label-2"}`}>
+                    {tab.label} <span className="num text-label-2">{tab.count}</span>
                   </button>
                 );
               })}
@@ -782,13 +782,13 @@ export function IncidentesClient({
               <div className="space-y-6">
                 {gruposMes.map((grupo) => (
                   <section key={grupo.clave}>
-                    <h2 className="mb-2 px-1 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">{grupo.titulo}</h2>
+                    <h2 className="mb-2 px-1 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">{grupo.titulo}</h2>
                     <div className="overflow-hidden rounded-[16px] bg-surface">
                       {grupo.items.map((incidente) => {
                         const Icono = ICONOS_TIPO[incidente.tipo];
                         return (
                           <button key={incidente.id} type="button" onClick={() => abrirFicha(incidente)} className="tap fila flex w-full min-h-[44px] items-center gap-3 px-4 py-3 text-left hover:bg-surface-2">
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-red-tint text-red"><Icono size={22} strokeWidth={1.75} aria-hidden /></span>
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-red-tint text-red"><Icono size={22} strokeWidth={1.75} aria-hidden /></span>
                             <span className="min-w-0 flex-1">
                               <span className="flex flex-wrap items-center gap-2">
                                 <span className="text-[17px] font-semibold text-label">{ETIQUETAS_TIPO_INCIDENTE[incidente.tipo]}</span>
@@ -914,7 +914,7 @@ export function IncidentesClient({
                   </div>
                   {errorVoz ? <p role="alert" className="flex items-center gap-2 rounded-[14px] bg-red-tint px-4 py-3 text-[15px] text-red"><AlertCircle size={22} strokeWidth={1.75} aria-hidden />{errorVoz}</p> : null}
                   <div className="rounded-[16px] bg-surface-2 p-4">
-                    <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Resumen</p>
+                    <p className="text-[13px] text-label-2">Resumen</p>
                     <dl className="mt-3 grid gap-3 text-[15px] sm:grid-cols-2">
                       <div><dt className="text-label-2">Tipo</dt><dd className="font-semibold text-label">{borrador.tipo ? ETIQUETAS_TIPO_INCIDENTE[borrador.tipo] : "Sin elegir"}</dd></div>
                       <div><dt className="text-label-2">Fecha y hora</dt><dd className="num font-semibold text-label">{formatearBorradorFecha(borrador.fecha_hora)}</dd></div>
@@ -977,7 +977,7 @@ function FichaIncidente({
         </dl>
       </section>
       <section className="rounded-[16px] bg-surface p-4">
-        <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Personal interviniente</p>
+        <p className="text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">Personal interviniente</p>
         <p className="mt-1 text-[15px] text-label-2">{incidente.personal.length ? `${incidente.personal.length} personas registradas.` : "Sin personal registrado."}</p>
         {incidente.personal.length ? (
           <div className="mt-3 overflow-hidden rounded-[16px] border border-separator">

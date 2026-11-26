@@ -1,70 +1,76 @@
 "use client";
 
-import { useState, useMemo, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { UserPlus, UserX, Search, Shield, Users, Award } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  UserX,
+} from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { Badge, CARGOS, isCargo, type Cargo } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Buscador } from "@/components/ui/buscador";
+import { Contador } from "@/components/ui/contador";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { Fila } from "@/components/ui/fila";
+import { Grupo } from "@/components/ui/grupo";
+import { Hoja } from "@/components/ui/hoja";
+import { Input } from "@/components/ui/input";
+import { Segmentado } from "@/components/ui/segmentado";
+import { Select } from "@/components/ui/select";
+import { isOficial } from "@/lib/cargos";
+import { VENTANA_DIAS } from "@/lib/tablero";
 import { crearBombero, darDeBajaBombero } from "./actions";
 import type { RosterBombero } from "./page";
 
-const inputClasses =
-  "h-11 w-full rounded-xl border border-line bg-surface px-4 text-[15px] text-ink placeholder:text-ink-faint focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/25 transition-all";
+type Seccion = "personal" | "turnos";
+type ErrorUI = { texto: string; tono: "rojo" | "amarillo" };
+
+function iniciales(nombre: string): string {
+  const palabras = nombre.split(/[\s,]+/).filter(Boolean);
+  const siglas = `${palabras[0]?.[0] ?? ""}${palabras[1]?.[0] ?? ""}`.toUpperCase();
+  return siglas || "?";
+}
 
 export function Admin({ bomberos }: { bomberos: RosterBombero[] }) {
   const router = useRouter();
 
-  const [numeroIngreso, setNumeroIngreso] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [cargo, setCargo] = useState<Cargo>("Bombero");
+  const [seccion, setSeccion] = useState<Seccion>("personal");
   const [busqueda, setBusqueda] = useState("");
   const [pendiente, setPendiente] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [error, setError] = useState<ErrorUI | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const [nuevoAbierto, setNuevoAbierto] = useState(false);
+  const [legajo, setLegajo] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [cargoNuevo, setCargoNuevo] = useState<Cargo>("Bombero");
+
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const [cargoDetalle, setCargoDetalle] = useState<Cargo>("Bombero");
   const [bajaId, setBajaId] = useState<string | null>(null);
+  const [bajasAbiertas, setBajasAbiertas] = useState(false);
+  const [generarAbierto, setGenerarAbierto] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   function limpiarAvisos() {
     setError(null);
-    setAviso(null);
+    setToast(null);
   }
 
-  async function onAlta(event: FormEvent) {
-    event.preventDefault();
-    limpiarAvisos();
-    setPendiente(true);
-    const resultado = await crearBombero(Number(numeroIngreso), nombre, cargo);
-    setPendiente(false);
-    if (resultado.ok) {
-      setNumeroIngreso("");
-      setNombre("");
-      setCargo("Bombero");
-      setAviso("Bombero dado de alta exitosamente en el padrón.");
-      router.refresh();
-    } else {
-      setError(resultado.error);
-    }
-  }
+  const totalOficiales = useMemo(
+    () => bomberos.filter((b) => isCargo(b.cargo) && isOficial(b.cargo)).length,
+    [bomberos]
+  );
 
-  async function onBaja(bomberoId: string) {
-    limpiarAvisos();
-    setPendiente(true);
-    const resultado = await darDeBajaBombero(bomberoId);
-    setPendiente(false);
-    setBajaId(null);
-    if (resultado.ok) {
-      setAviso("Bombero dado de baja del padrón activo.");
-      router.refresh();
-    } else {
-      setError(resultado.error);
-    }
-  }
-
-  // KPIs
-  const totalOficiales = useMemo(() => {
-    return bomberos.filter((b) => b.cargo.includes("Oficial")).length;
-  }, [bomberos]);
-
-  // Filtrado en vivo del padrón
   const bomberosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return bomberos;
     const q = busqueda.toLowerCase().trim();
@@ -76,228 +82,420 @@ export function Admin({ bomberos }: { bomberos: RosterBombero[] }) {
     );
   }, [bomberos, busqueda]);
 
+  const detalle = bomberos.find((b) => b.id === detalleId) ?? null;
+  const baja = bomberos.find((b) => b.id === bajaId) ?? null;
+
+  function abrirDetalle(bombero: RosterBombero) {
+    limpiarAvisos();
+    setCargoDetalle(isCargo(bombero.cargo) ? bombero.cargo : "Bombero");
+    setDetalleId(bombero.id);
+  }
+
+  function cerrarBaja() {
+    const id = bajaId;
+    setBajaId(null);
+    if (id) setDetalleId(id);
+  }
+
+  async function onAlta(evento: FormEvent) {
+    evento.preventDefault();
+    limpiarAvisos();
+    if (!/^\d{3}$/.test(legajo)) {
+      setError({ texto: "Ingresá un legajo de tres dígitos.", tono: "rojo" });
+      return;
+    }
+    setPendiente(true);
+    const resultado = await crearBombero(Number(legajo), nombre, cargoNuevo);
+    setPendiente(false);
+    if (resultado.ok) {
+      setNuevoAbierto(false);
+      setLegajo("");
+      setNombre("");
+      setCargoNuevo("Bombero");
+      setToast("Bombero agregado al padrón.");
+      router.refresh();
+    } else {
+      setError({ texto: resultado.error, tono: "rojo" });
+    }
+  }
+
+  async function onBaja() {
+    if (!bajaId) return;
+    const objetivo = bomberos.find((b) => b.id === bajaId);
+    limpiarAvisos();
+    setPendiente(true);
+    const resultado = await darDeBajaBombero(bajaId);
+    setPendiente(false);
+    setBajaId(null);
+    if (resultado.ok) {
+      setDetalleId(null);
+      setToast("Bombero dado de baja del padrón activo.");
+      router.refresh();
+    } else {
+      setError({
+        texto: resultado.error,
+        tono: resultado.error.includes("último oficial") ? "amarillo" : "rojo",
+      });
+      if (objetivo) setDetalleId(objetivo.id);
+    }
+  }
+
+  function confirmarGenerar() {
+    setGenerarAbierto(false);
+    setToast(
+      "Los turnos de la ventana los genera el cron diario; esta pantalla no crea turnos por su cuenta."
+    );
+  }
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
-      {/* Cabecera */}
-      <div>
-        <h1 className="heading-display text-2xl text-ink sm:text-3xl">
-          Panel de Administración del Padrón
-        </h1>
-        <p className="mt-1 text-[14px] sm:text-[15px] text-ink-muted">
-          Gestión institucional de altas y bajas del cuerpo de bomberos.
-        </p>
-      </div>
+    <div className="min-h-dvh bg-bg pb-24">
+      <PageHeader
+        titulo="Administración"
+        subtitulo="Personal y turnos del cuartel"
+        acciones={
+          <button
+            type="button"
+            onClick={() => {
+              limpiarAvisos();
+              setNuevoAbierto(true);
+            }}
+            aria-label="Agregar bombero"
+            className="tap flex h-11 w-11 items-center justify-center rounded-[14px] bg-red text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+          >
+            <Plus size={22} strokeWidth={1.75} aria-hidden />
+          </button>
+        }
+      />
 
-      {/* Mini KPIs de la Dotación */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(255,255,255,0.03),0_8px_24px_rgba(0,0,0,0.16)]">
-          <div className="flex items-center gap-2 text-ink-muted">
-            <Users className="h-4 w-4 text-fire-soft" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider">
-              Total Activos
-            </span>
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-5 lg:px-8">
+        <Segmentado
+          etiqueta="Sección de administración"
+          opciones={[
+            { valor: "personal", etiqueta: "Personal" },
+            { valor: "turnos", etiqueta: "Turnos" },
+          ]}
+          valor={seccion}
+          onChange={(valor) => setSeccion(valor === "turnos" ? "turnos" : "personal")}
+        />
+
+        {error ? (
+          <div
+            role={error.tono === "amarillo" ? "status" : "alert"}
+            className={`mt-4 rounded-[14px] px-4 py-3 text-[15px] ${
+              error.tono === "amarillo"
+                ? "bg-yellow-tint text-yellow-ink"
+                : "bg-red-tint text-red"
+            }`}
+          >
+            {error.texto}
           </div>
-          <p className="heading-display mt-1 text-2xl font-bold text-ink">
-            {bomberos.length}
-          </p>
-        </div>
+        ) : null}
 
-        <div className="rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(255,255,255,0.03),0_8px_24px_rgba(0,0,0,0.16)]">
-          <div className="flex items-center gap-2 text-ink-muted">
-            <Shield className="h-4 w-4 text-brass" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider">
-              Oficiales
-            </span>
-          </div>
-          <p className="heading-display mt-1 text-2xl font-bold text-brass">
-            {totalOficiales}
-          </p>
-        </div>
-
-        <div className="col-span-2 sm:col-span-1 rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(255,255,255,0.03),0_8px_24px_rgba(0,0,0,0.16)]">
-          <div className="flex items-center gap-2 text-ink-muted">
-            <Award className="h-4 w-4 text-ok" />
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider">
-              Estado de Dotación
-            </span>
-          </div>
-          <p className="font-mono text-[13px] font-bold mt-1 text-ok">
-            Padrón Sincronizado
-          </p>
-        </div>
-      </div>
-
-      {aviso ? (
-        <p className="mt-4 rounded-xl border-l-4 border-ok bg-ok/10 px-4 py-3 text-[14px] font-bold text-ink animate-slide-up">
-          {aviso}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-4 rounded-xl border-l-4 border-fire bg-fire/10 px-4 py-3 text-[14px] font-bold text-ink animate-shake">
-          {error}
-        </p>
-      ) : null}
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)] lg:items-start">
-        {/* Formulario de Alta */}
-        <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6 shadow-[0_1px_0_rgba(255,255,255,0.03),0_8px_24px_rgba(0,0,0,0.16)]">
-          <div className="flex items-center gap-2 border-b border-line pb-3">
-            <UserPlus className="h-5 w-5 text-fire-soft" />
-            <h2 className="heading-display text-lg text-ink font-bold">
-              Dar de Alta Bombero
-            </h2>
-          </div>
-
-          <form onSubmit={onAlta} className="mt-4 space-y-4">
-            <div>
-              <label className="mb-1.5 block text-[12px] font-bold text-ink-muted uppercase tracking-wider">
-                Número de Ingreso / Legajo
-              </label>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={1}
-                required
-                value={numeroIngreso}
-                onChange={(e) => setNumeroIngreso(e.target.value)}
-                className={inputClasses}
-                placeholder="Ej.: 045"
+        {seccion === "personal" ? (
+          <div className="mt-5 space-y-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Contador valor={bomberos.length} etiqueta="Activos" tono="fire" icono="Users" />
+              <Contador
+                valor={totalOficiales}
+                etiqueta="Oficiales"
+                tono="brass"
+                icono="ShieldCheck"
+              />
+              <Contador
+                valor={VENTANA_DIAS}
+                etiqueta="Días de ventana"
+                tono="ok"
+                icono="CalendarRange"
+                className="col-span-2 sm:col-span-1"
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-[12px] font-bold text-ink-muted uppercase tracking-wider">
-                Apellido y Nombre
-              </label>
-              <input
-                type="text"
-                required
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                className={inputClasses}
-                placeholder="Ej.: Pérez, Juan Carlos"
+            <Buscador
+              value={busqueda}
+              onChange={setBusqueda}
+              placeholder="Buscar por nombre o legajo"
+              etiqueta="Buscar bombero"
+            />
+
+            {bomberosFiltrados.length === 0 ? (
+              <EstadoVacio
+                icono="UserRoundSearch"
+                titulo="Sin resultados"
+                texto="No se encontraron bomberos que coincidan con la búsqueda."
               />
-            </div>
+            ) : (
+              <Grupo titulo={`Padrón activo (${bomberosFiltrados.length})`}>
+                {bomberosFiltrados.map((bombero) => {
+                  const oficial = isCargo(bombero.cargo) && isOficial(bombero.cargo);
+                  return (
+                    <button
+                      key={bombero.id}
+                      type="button"
+                      onClick={() => abrirDetalle(bombero)}
+                      className="fila tap flex w-full items-center gap-3 px-4 py-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-red"
+                    >
+                      <span
+                        aria-hidden
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-semibold ${
+                          oficial
+                            ? "bg-yellow-tint text-yellow-ink"
+                            : "bg-surface-2 text-label-2"
+                        }`}
+                      >
+                        {iniciales(bombero.nombre_completo)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[17px] font-semibold text-label">
+                          {bombero.nombre_completo}
+                        </span>
+                        <span className="num mt-0.5 block text-[15px] text-label-2">
+                          Legajo {String(bombero.numero_ingreso).padStart(3, "0")}
+                        </span>
+                      </span>
+                      {isCargo(bombero.cargo) ? (
+                        <Badge cargo={bombero.cargo} className="shrink-0" />
+                      ) : null}
+                      <ChevronRight
+                        size={22}
+                        strokeWidth={1.75}
+                        className="shrink-0 text-label-3"
+                        aria-hidden
+                      />
+                    </button>
+                  );
+                })}
+              </Grupo>
+            )}
 
             <div>
-              <label className="mb-1.5 block text-[12px] font-bold text-ink-muted uppercase tracking-wider">
-                Jerarquía / Cargo
-              </label>
-              <select
-                value={cargo}
-                onChange={(e) => {
-                  if (isCargo(e.target.value)) setCargo(e.target.value);
-                }}
-                className={inputClasses}
+              <button
+                type="button"
+                onClick={() => setBajasAbiertas((abiertas) => !abiertas)}
+                aria-expanded={bajasAbiertas}
+                className="tap flex min-h-11 w-full items-center justify-between rounded-[14px] bg-surface px-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
               >
-                {CARGOS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                <span className="text-[15px] font-medium text-label-2">Dados de baja</span>
+                <ChevronDown
+                  size={22}
+                  strokeWidth={1.75}
+                  className={`shrink-0 text-label-3 transition-transform duration-200 ${
+                    bajasAbiertas ? "rotate-180" : ""
+                  }`}
+                  aria-hidden
+                />
+              </button>
+              {bajasAbiertas ? (
+                <Grupo className="mt-2">
+                  <Fila
+                    titulo="Sin detalle en esta vista"
+                    subtitulo="El padrón cargado incluye solo el personal activo."
+                  />
+                </Grupo>
+              ) : null}
             </div>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Contador valor="—" etiqueta="Días cubiertos" tono="ok" icono="CalendarCheck2" />
+              <Contador valor="—" etiqueta="Cupos libres" tono="alarm" icono="Users" />
+              <Contador valor="—" etiqueta="Celdas completas" tono="ink" icono="CheckCircle2" />
+              <Contador
+                valor={VENTANA_DIAS}
+                etiqueta="Días consultados"
+                tono="fire"
+                icono="CalendarRange"
+              />
+            </div>
+            <p className="rounded-[14px] bg-surface px-4 py-3 text-[15px] text-label-2">
+              El detalle de cobertura de los próximos {VENTANA_DIAS} días está en Guardias.
+            </p>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setGenerarAbierto(true)}
+            >
+              <CalendarClock size={20} strokeWidth={1.75} aria-hidden />
+              Generar turnos de la ventana
+            </Button>
+          </div>
+        )}
+      </div>
 
+      <Hoja
+        open={detalle !== null}
+        onClose={() => setDetalleId(null)}
+        title="Detalle del bombero"
+        footer={
+          <Button
+            variant="danger"
+            className="w-full"
+            onClick={() => {
+              if (!detalle) return;
+              setBajaId(detalle.id);
+              setDetalleId(null);
+            }}
+          >
+            <UserX size={20} strokeWidth={1.75} aria-hidden />
+            Dar de baja
+          </Button>
+        }
+      >
+        {detalle ? (
+          <div className="space-y-4">
+            <Grupo titulo="Datos">
+              <Fila
+                titulo="Legajo"
+                valor={
+                  <span className="num text-[17px] text-label-2">
+                    {String(detalle.numero_ingreso).padStart(3, "0")}
+                  </span>
+                }
+                chevron={false}
+              />
+              <Fila
+                titulo="Estado"
+                valor={
+                  <span className="rounded-full bg-green-tint px-3 py-1 text-[13px] font-semibold text-green-ink">
+                    Activo
+                  </span>
+                }
+                chevron={false}
+              />
+            </Grupo>
+            <Select
+              label="Cargo"
+              value={cargoDetalle}
+              disabled
+              hint="Los cambios de cargo se revalidan desde la base en la próxima acción."
+              onChange={(evento) => {
+                if (isCargo(evento.target.value)) setCargoDetalle(evento.target.value);
+              }}
+            >
+              {CARGOS.map((cargo) => (
+                <option key={cargo} value={cargo}>
+                  {cargo}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
+      </Hoja>
+
+      <Hoja
+        open={baja !== null}
+        onClose={cerrarBaja}
+        title="Dar de baja"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button variant="secondary" className="w-full" onClick={cerrarBaja}>
+              Cancelar
+            </Button>
+            <Button className="w-full" onClick={() => void onBaja()} disabled={pendiente}>
+              Dar de baja
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[17px] leading-relaxed text-label">
+          ¿Dar de baja a <span className="font-semibold">{baja?.nombre_completo}</span>? Va a perder
+          el acceso en su próxima acción y se liberan sus guardias.
+        </p>
+      </Hoja>
+
+      <Hoja
+        open={nuevoAbierto}
+        onClose={() => setNuevoAbierto(false)}
+        title="Nuevo bombero"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setNuevoAbierto(false)}
+            >
+              Cancelar
+            </Button>
             <Button
               type="submit"
-              size="md"
-              className="w-full h-11 text-[14px] font-bold uppercase tracking-wider shadow-[0_0_18px_rgba(198,40,40,0.22)]"
+              form="form-nuevo-bombero"
+              className="w-full"
               disabled={pendiente}
             >
-              <UserPlus className="h-4 w-4 mr-1" aria-hidden />
-              {pendiente ? "Registrando…" : "Registrar en Padrón"}
+              {pendiente ? "Agregando…" : "Agregar bombero"}
             </Button>
-          </form>
-        </div>
-
-        {/* Lista de Bomberos Activos con Buscador */}
-        <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6 shadow-[0_1px_0_rgba(255,255,255,0.03),0_8px_24px_rgba(0,0,0,0.16)]">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-ink-muted" />
-              <h2 className="heading-display text-lg text-ink font-bold">
-                Padrón Activo ({bomberosFiltrados.length})
-              </h2>
-            </div>
-
-            {/* Buscador en vivo */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
-              <input
-                type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por nombre o legajo…"
-                className="h-11 w-full sm:w-64 rounded-xl border border-line bg-surface-hover pl-9 pr-3 text-[15px] text-ink placeholder:text-ink-faint focus:border-fire focus:outline-none focus:ring-2 focus:ring-fire/25"
-              />
-            </div>
           </div>
+        }
+      >
+        <form id="form-nuevo-bombero" onSubmit={onAlta} className="space-y-4">
+          <Input
+            label="Legajo"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="014"
+            maxLength={3}
+            value={legajo}
+            onChange={(evento) =>
+              setLegajo(evento.target.value.replace(/\D/g, "").slice(0, 3))
+            }
+            hint="Tres dígitos."
+          />
+          <Input
+            label="Apellido y nombre"
+            autoComplete="off"
+            placeholder="Pérez, Juan"
+            value={nombre}
+            onChange={(evento) => setNombre(evento.target.value)}
+          />
+          <Select
+            label="Cargo"
+            value={cargoNuevo}
+            onChange={(evento) => {
+              if (isCargo(evento.target.value)) setCargoNuevo(evento.target.value);
+            }}
+          >
+            {CARGOS.map((cargo) => (
+              <option key={cargo} value={cargo}>
+                {cargo}
+              </option>
+            ))}
+          </Select>
+        </form>
+      </Hoja>
 
-          {bomberosFiltrados.length === 0 ? (
-            <p className="py-12 text-center text-[14px] text-ink-muted">
-              No se encontraron bomberos que coincidan con la búsqueda.
-            </p>
-          ) : (
-            <ul className="mt-4 max-h-[480px] overflow-y-auto space-y-2.5 pr-1 divide-y divide-line/40">
-              {bomberosFiltrados.map((b) => (
-                <li
-                  key={b.id}
-                  className="pt-2.5 first:pt-0 flex flex-wrap items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-surface-hover transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[15px] font-bold text-ink leading-tight">
-                      {b.nombre_completo}
-                    </p>
-                    <p className="font-mono text-[12px] text-ink-muted">
-                      Legajo N° {String(b.numero_ingreso).padStart(3, "0")}
-                    </p>
-                  </div>
+      <Hoja
+        open={generarAbierto}
+        onClose={() => setGenerarAbierto(false)}
+        title="Generar turnos"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => setGenerarAbierto(false)}
+            >
+              Cancelar
+            </Button>
+            <Button className="w-full" onClick={confirmarGenerar}>
+              Entendido
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-[17px] leading-relaxed text-label">
+          La ventana de {VENTANA_DIAS} días se genera automáticamente cada día. Esta pantalla no
+          crea turnos por su cuenta.
+        </p>
+      </Hoja>
 
-                  <div className="flex items-center gap-2">
-                    {isCargo(b.cargo) ? <Badge cargo={b.cargo} /> : null}
-
-                    {bajaId === b.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="sm"
-                          onClick={() => onBaja(b.id)}
-                          disabled={pendiente}
-                          className="h-11 px-3 text-[12px] bg-fire hover:bg-fire-dark"
-                        >
-                          Confirmar Baja
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setBajaId(null)}
-                          disabled={pendiente}
-                          className="h-11 px-3 text-[12px]"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-11 px-2.5 text-[12px] text-ink-muted hover:text-fire-soft hover:bg-fire/10"
-                        onClick={() => {
-                          limpiarAvisos();
-                          setBajaId(b.id);
-                        }}
-                        disabled={pendiente}
-                      >
-                        <UserX className="h-3.5 w-3.5 mr-1" aria-hidden />
-                        Dar de baja
-                      </Button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+      {toast ? (
+        <div
+          role="status"
+          className="no-print fixed inset-x-4 bottom-24 z-50 mx-auto w-fit max-w-[90vw] rounded-full bg-label px-5 py-3 text-center text-[15px] font-medium text-surface animate-fade-in lg:bottom-6"
+        >
+          {toast}
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

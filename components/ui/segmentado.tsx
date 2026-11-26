@@ -32,7 +32,7 @@ export function Segmentado({
             type="button"
             aria-pressed={activo}
             onClick={() => onChange(opcion.valor)}
-            className={`tap min-h-11 flex-1 rounded-[11px] px-3 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+            className={`tap min-h-11 flex-1 rounded-[14px] px-3 text-[15px] font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
               activo ? "bg-surface text-label shadow-[0_1px_2px_rgba(0,0,0,.04)]" : "text-label-2"
             }`}
           >

@@ -46,7 +46,7 @@ export function Tabs({
       role="tablist"
       aria-label={ariaLabel}
       onKeyDown={onKeyDown}
-      className={`flex items-center gap-1 overflow-x-auto border-b border-line ${className}`}
+      className={`flex items-center gap-1 overflow-x-auto border-b border-separator ${className}`}
     >
       {items.map((item) => {
         const activo = item.value === value;
@@ -59,30 +59,30 @@ export function Tabs({
             aria-selected={activo}
             tabIndex={activo ? 0 : -1}
             onClick={() => onChange(item.value)}
-            className={`relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-lg px-3.5 text-[14px] font-bold uppercase tracking-wider transition-all duration-150 ${
+            className={`tap relative inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-[14px] px-3.5 text-[15px] font-semibold transition-all duration-200 ease-[cubic-bezier(.2,.8,.2,1)] ${
               activo
-                ? "bg-fire/15 text-ink ring-1 ring-inset ring-fire/30"
-                : "text-ink-muted hover:bg-surface-hover/70 hover:text-ink"
+                ? "bg-red-tint text-label ring-1 ring-inset ring-red"
+                : "text-label-2 hover:bg-surface-2 hover:text-label"
             }`}
           >
             {Icono ? (
               <Icono
                 className={`h-4 w-4 ${
-                  activo ? "text-fire-soft" : "text-ink-muted"
+                  activo ? "text-red" : "text-label-2"
                 }`}
                 aria-hidden
               />
             ) : null}
             <span>{item.label}</span>
             {item.badge !== undefined ? (
-              <span className="rounded-full bg-line/50 px-2 py-0.5 font-mono text-[10px] font-bold text-ink">
+              <span className="num rounded-full bg-separator px-2 py-0.5 text-[12px] font-bold text-label">
                 {item.badge}
               </span>
             ) : null}
             {activo ? (
               <span
                 aria-hidden
-                className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-fire animate-fade-in"
+                className="absolute bottom-0 left-3 right-3 h-[2px] rounded-full bg-red animate-fade-in"
               />
             ) : null}
           </button>

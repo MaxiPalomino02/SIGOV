@@ -50,92 +50,92 @@ const CONFIG: Record<EstadoStatusPill, Config> = {
   operativo: {
     label: "Operativo",
     Icon: CheckCircle2,
-    className: "border-ok/40 bg-ok-light text-ok",
+    className: "border-green bg-green-tint text-green-ink",
   },
   "en-servicio": {
     label: "En servicio",
     Icon: CheckCircle2,
-    className: "border-alarm-border bg-alarm-light text-alarm",
+    className: "border-yellow bg-yellow-tint text-yellow-ink",
   },
   "fuera-de-servicio": {
     label: "Fuera de servicio",
     Icon: Wrench,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   pendiente: {
     label: "Pendiente",
     Icon: Clock3,
-    className: "border-brass-border bg-brass-light text-brass",
+    className: "border-yellow bg-yellow-tint text-yellow-ink",
   },
   vencido: {
     label: "Vencido",
     Icon: XCircle,
-    className: "border-error-border bg-error-light text-error-text",
+    className: "border-red bg-red-tint text-red",
   },
   "sin-conexion": {
     label: "Sin conexión",
     Icon: WifiOff,
-    className: "border-line bg-surface-hover text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   cargado: {
     label: "Cargado",
     Icon: CheckCircle2,
-    className: "border-ok/40 bg-ok-light text-ok",
+    className: "border-green bg-green-tint text-green-ink",
   },
   borrador: {
     label: "Borrador",
     Icon: Clock3,
-    className: "border-brass-border bg-brass-light text-brass",
+    className: "border-yellow bg-yellow-tint text-yellow-ink",
   },
   "guardado-offline": {
     label: "Guardado sin conexión",
     Icon: Download,
-    className: "border-brass-border bg-brass-light text-brass",
+    className: "border-yellow bg-yellow-tint text-yellow-ink",
   },
   pdf: {
     label: "PDF",
     Icon: FileText,
-    className: "border-fire-border bg-fire-light text-fire-text",
+    className: "border-red bg-red-tint text-red",
   },
   imagen: {
     label: "Imagen",
     Icon: ImageIcon,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   word: {
     label: "Word",
     Icon: FileType,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   excel: {
     label: "Excel",
     Icon: FileSpreadsheet,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   archivo: {
     label: "Archivo",
     Icon: File,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   charla: {
     label: "Charla",
     Icon: MessageCircle,
-    className: "border-brass-border bg-brass-light text-brass",
+    className: "border-yellow bg-yellow-tint text-yellow-ink",
   },
   inspeccion: {
     label: "Inspección",
     Icon: ClipboardCheck,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
   simulacro: {
     label: "Simulacro",
     Icon: Siren,
-    className: "border-alarm-border bg-alarm-light text-alarm",
+    className: "border-red bg-red-tint text-red",
   },
   otra: {
     label: "Otra",
     Icon: FileText,
-    className: "border-line bg-bg-subtle text-ink-muted",
+    className: "border-separator bg-surface-2 text-label-2",
   },
 };
 
@@ -161,7 +161,7 @@ export function StatusPill({
     return (
       <span
         role="status"
-        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-error-border bg-error-light px-3 py-1 text-[13px] font-semibold text-error-text ${className}`}
+        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-red bg-red-tint px-3 py-1 text-[13px] font-semibold text-red ${className}`}
       >
         <AlertCircle className="h-4 w-4" aria-hidden />
         <span>{error}</span>
@@ -172,7 +172,7 @@ export function StatusPill({
     return (
       <span
         role="status"
-        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line bg-bg-subtle px-3 py-1 text-[13px] font-semibold text-ink-muted ${className}`}
+        className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border border-separator bg-surface-2 px-3 py-1 text-[13px] font-semibold text-label-2 ${className}`}
       >
         <Clock3 className="h-4 w-4" aria-hidden />
         <span>Sin estado</span>

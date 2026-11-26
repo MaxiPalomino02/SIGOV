@@ -411,7 +411,7 @@ export function EquiposClient({ oficial }: Props) {
                 ["Notas", fichaActual.notas || "Sin notas"],
               ].map(([k, v], i, arr) => (
                 <div key={k} className={`px-4 py-3 ${i < arr.length - 1 ? "border-b border-separator" : ""}`}>
-                  <p className="text-[13px] font-medium tracking-[.3px] text-label-2 uppercase">{k}</p>
+                  <p className="text-[13px] text-label-2">{k}</p>
                   <p className="mt-1 text-[17px] text-label">{v}</p>
                 </div>
               ))}

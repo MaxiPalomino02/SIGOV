@@ -1,0 +1,7 @@
+.pantalla {
+  min-height: 100dvh;
+}
+
+:global(body:has([data-login]) .no-print) {
+  display: none !important;
+}

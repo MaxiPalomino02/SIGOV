@@ -57,7 +57,7 @@ export async function BannerAlarma() {
           {vista.simulacro ? " · Simulacro" : ""}
         </span>
         {vista.detalle ? (
-          <span className="block truncate text-[15px] text-surface/90">{vista.detalle}</span>
+          <span className="block truncate text-[15px] text-surface">{vista.detalle}</span>
         ) : null}
       </span>
       <span className="shrink-0 text-[15px] font-semibold text-surface">Responder</span>

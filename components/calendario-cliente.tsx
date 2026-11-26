@@ -79,12 +79,12 @@ function chipClase(tipo: string): string {
   switch (tipo) {
     case "capacitacion":
     case "acto":
-      return "border-brass-border bg-brass-light text-brass";
+      return "border-yellow bg-yellow-tint text-yellow-ink";
     case "reunion":
     case "simulacro":
-      return "border-alarm-border bg-alarm-light text-alarm";
+      return "border-red bg-red-tint text-red";
     default:
-      return "border-line bg-surface-hover text-ink-muted";
+      return "border-separator bg-surface-2 text-label-2";
   }
 }
 
@@ -290,13 +290,13 @@ export function CalendarioClient({
         >
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[13px] uppercase tracking-widest text-ink-muted">
+              <span className="font-mono text-[13px] uppercase tracking-widest text-label-2">
                 Tipo
               </span>
               <select
                 value={filtroTipo}
                 onChange={(e) => setFiltroTipo(e.target.value)}
-                className="rounded-xl border border-line bg-surface px-3 py-1.5 text-[13px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                className="rounded-[14px] border border-separator bg-surface px-3 py-1.5 text-[13px] text-label focus-visible:outline-2 focus-visible:outline-red"
               >
                 <option value="todos">Todos</option>
                 {TIPOS.map((t) => (
@@ -308,18 +308,18 @@ export function CalendarioClient({
               <button
                 type="button"
                 onClick={mesAnterior}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-surface-hover"
+                className="tap inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-separator bg-surface text-label transition-colors duration-200 hover:bg-surface-2"
                 aria-label="Mes anterior"
               >
                 <ChevronLeft className="h-5 w-5" aria-hidden />
               </button>
-              <span className="font-mono text-[13px] font-bold text-ink">
+              <span className="font-mono text-[13px] font-bold text-label">
                 {nombreMes}
               </span>
               <button
                 type="button"
                 onClick={mesSiguiente}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-ink hover:bg-surface-hover"
+                className="tap inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-separator bg-surface text-label transition-colors duration-200 hover:bg-surface-2"
                 aria-label="Mes siguiente"
               >
                 <ChevronRight className="h-5 w-5" aria-hidden />
@@ -341,7 +341,7 @@ export function CalendarioClient({
               {DIAS.map((d) => (
                 <div
                   key={d}
-                  className="font-mono text-[13px] font-bold text-ink-secondary"
+                  className="font-mono text-[13px] font-bold text-label-2"
                 >
                   {d}
                 </div>
@@ -362,18 +362,18 @@ export function CalendarioClient({
                     return (
                       <div
                         key={fechaKey}
-                        className={`flex flex-col gap-1 p-1.5 rounded-xl border min-h-[100px] ${
+                        className={`flex flex-col gap-1 p-1.5 rounded-[16px] border min-h-[100px] ${
                           esDiaHoy
-                            ? "border-alarm-border bg-alarm-light"
-                            : "border-line bg-surface-hover"
-                        } ${!esDelMes ? "text-ink-secondary" : ""}`}
+                            ? "border-red bg-red-tint"
+                            : "border-separator bg-surface-2"
+                        } ${!esDelMes ? "text-label-2" : ""}`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-mono text-[13px] font-bold">
                             {new Date(fechaKey).getDate()}
                           </span>
                           {esDiaHoy && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-alarm" aria-hidden />
+                            <span className="h-1.5 w-1.5 rounded-full bg-red" aria-hidden />
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5">
@@ -381,14 +381,14 @@ export function CalendarioClient({
                             <div
                               key={e.id}
                               onClick={() => abrirDetalle(e)}
-                              className="cursor-pointer truncate text-[13px] leading-none px-1 py-0.5 rounded bg-surface text-ink-muted hover:bg-surface-hover"
+                              className="tap cursor-pointer truncate text-[13px] leading-none px-1 py-0.5 rounded bg-surface text-label-2 transition-colors duration-200 hover:bg-surface-2"
                               title={e.titulo}
                             >
                               {e.titulo}
                             </div>
                           ))}
                           {diaEventos.length > 3 && (
-                            <span className="text-[13px] text-ink-secondary">
+                            <span className="text-[13px] text-label-2">
                               +{diaEventos.length - 3}
                             </span>
                           )}
@@ -399,7 +399,7 @@ export function CalendarioClient({
                 </div>
               ))}
             </div>
-            <p className="mt-3 font-mono text-[13px] text-ink-secondary">
+            <p className="mt-3 font-mono text-[13px] text-label-2">
               Vista de mes. En celular se muestra como lista agrupada por día.
             </p>
           </div>
@@ -422,7 +422,7 @@ export function CalendarioClient({
                 <div key={fechaKey} className="space-y-1">
                   <h3
                     className={`font-mono text-[13px] uppercase tracking-widest mb-1 ${
-                      esHoy(fechaKey) ? "text-alarm" : "text-ink-muted"
+                      esHoy(fechaKey) ? "text-red" : "text-label-2"
                     }`}
                   >
                     {formatFechaKey(fechaKey)}
@@ -435,7 +435,7 @@ export function CalendarioClient({
                       <div
                         key={e.id}
                         onClick={() => abrirDetalle(e)}
-                        className="cursor-pointer flex items-center justify-between gap-2 rounded-xl border border-line bg-surface p-3 text-left hover:bg-surface-hover"
+                        className="tap cursor-pointer flex items-center justify-between gap-2 rounded-[16px] border border-separator bg-surface p-3 text-left transition-colors duration-200 hover:bg-surface-2"
                       >
                         <div>
                           <span
@@ -445,20 +445,20 @@ export function CalendarioClient({
                           >
                             {TIPOS_LABEL[e.tipo]}
                           </span>
-                          <p className="mt-0.5 text-[14px] font-bold text-ink">
+                          <p className="mt-0.5 text-[14px] font-bold text-label">
                             {e.titulo}
                           </p>
-                          <p className="text-[13px] text-ink-muted">
+                          <p className="text-[13px] text-label-2">
                             {formatearHora(e.inicio)} - {formatearHora(e.fin)}
                           </p>
                           {e.lugar && (
-                            <p className="mt-0.5 text-[13px] text-ink-secondary flex items-center gap-1">
+                            <p className="mt-0.5 text-[13px] text-label-2 flex items-center gap-1">
                               <MapPin className="h-3 w-3 shrink-0" aria-hidden />
                               {e.lugar}
                             </p>
                           )}
                         </div>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-ink-secondary" aria-hidden />
+                        <ChevronRight className="h-4 w-4 shrink-0 text-label-2" aria-hidden />
                       </div>
                     ))}
                   </div>
@@ -494,27 +494,27 @@ export function CalendarioClient({
                   onClick={() => {
                     setHojaModo("editar");
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3 py-1.5 text-[13px] text-ink hover:bg-surface-hover"
+                  className="tap inline-flex items-center gap-1.5 rounded-[14px] border border-separator bg-surface px-3 py-1.5 text-[13px] text-label transition-colors duration-200 hover:bg-surface-2"
                 >
                   <X className="h-4 w-4" aria-hidden /> Editar
                 </button>
               )}
             </div>
-            <h3 className="heading-display text-lg text-ink">
+            <h3 className="heading-display text-lg text-label">
               {hojaEvento.titulo}
             </h3>
-            <p className="mt-1 text-[14px] leading-relaxed text-ink-muted">
+            <p className="mt-1 text-[14px] leading-relaxed text-label-2">
               {hojaEvento.descripcion || "Sin descripción."}
             </p>
             <div className="mt-3 space-y-1 text-[14px]">
               <p className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+                <Clock className="h-4 w-4 shrink-0 text-label-2" aria-hidden />
                 {formatFechaKey(fechaDeEvento(hojaEvento))} ·{" "}
                 {formatearHora(hojaEvento.inicio)} - {formatearHora(hojaEvento.fin)}
               </p>
               {hojaEvento.lugar && (
-                <p className="flex items-center gap-2 text-[14px] text-ink-muted">
-                  <MapPin className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+                <p className="flex items-center gap-2 text-[14px] text-label-2">
+                  <MapPin className="h-4 w-4 shrink-0 text-label-2" aria-hidden />
                   {hojaEvento.lugar}
                 </p>
               )}
@@ -524,7 +524,7 @@ export function CalendarioClient({
                 type="button"
                 onClick={onBorrar}
                 disabled={guardando}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-fire bg-transparent px-4 py-2 text-[14px] font-semibold text-fire-text hover:bg-fire-light disabled:opacity-60"
+                className="tap mt-3 inline-flex items-center gap-1.5 rounded-[14px] border border-red bg-transparent px-4 py-2 text-[14px] font-semibold text-red transition-colors duration-200 hover:bg-red-tint disabled:text-label-2 disabled:bg-surface-2"
               >
                 <X className="h-4 w-4" aria-hidden /> Borrar evento
               </button>
@@ -538,18 +538,18 @@ export function CalendarioClient({
           >
             <input type="hidden" name="id" defaultValue={hojaEvento?.id ?? ""} />
             <div>
-              <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+              <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                 Título
               </label>
               <input
                 name="titulo"
                 defaultValue={hojaModo === "editar" ? hojaEvento?.titulo ?? "" : ""}
-                className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
                 required
               />
             </div>
             <div>
-              <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+              <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                 Tipo
               </label>
               <select
@@ -557,7 +557,7 @@ export function CalendarioClient({
                 defaultValue={
                   hojaModo === "editar" ? hojaEvento?.tipo ?? "capacitacion" : ""
                 }
-                className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
               >
                 {TIPOS.map((t) => (
                   <option key={t} value={t}>
@@ -568,7 +568,7 @@ export function CalendarioClient({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+                <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                   Inicio
                 </label>
                 <input
@@ -579,12 +579,12 @@ export function CalendarioClient({
                       ? aInputLocal(hojaEvento?.inicio ?? "")
                       : ""
                   }
-                  className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                  className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+                <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                   Fin
                 </label>
                 <input
@@ -595,23 +595,23 @@ export function CalendarioClient({
                       ? aInputLocal(hojaEvento?.fin ?? "")
                       : ""
                   }
-                  className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                  className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+              <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                 Lugar
               </label>
               <input
                 name="lugar"
                 defaultValue={hojaModo === "editar" ? hojaEvento?.lugar ?? "" : ""}
-                className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
               />
             </div>
             <div>
-              <label className="block text-[13px] font-bold uppercase tracking-widest text-ink-muted">
+              <label className="block text-[13px] font-bold uppercase tracking-widest text-label-2">
                 Descripción
               </label>
               <textarea
@@ -622,21 +622,21 @@ export function CalendarioClient({
                     ? hojaEvento?.descripcion ?? ""
                     : ""
                 }
-                className="w-full rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fire"
+                className="w-full rounded-[14px] border border-separator bg-surface px-3 py-2 text-[14px] text-label focus-visible:outline-2 focus-visible:outline-red"
               />
             </div>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={cerrarHoja}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-4 py-2 text-[14px] text-ink hover:bg-surface-hover"
+                className="tap inline-flex items-center gap-1.5 rounded-[14px] border border-separator bg-surface px-4 py-2 text-[14px] text-label transition-colors duration-200 hover:bg-surface-2"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={guardando}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brass bg-brass px-4 py-2 text-[14px] font-semibold text-bg disabled:opacity-60 hover:bg-brass/90"
+                className="tap inline-flex items-center gap-1.5 rounded-[14px] border border-yellow bg-yellow px-4 py-2 text-[14px] font-semibold text-label transition-colors duration-200 disabled:text-label-2 disabled:bg-surface-2 hover:bg-yellow"
               >
                 {guardando ? "Guardando…" : "Guardar evento"}
               </button>

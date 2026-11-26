@@ -2,14 +2,16 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, ShieldAlert } from "lucide-react";
-import { AlertCard, type NivelAlerta, type TipoAlerta } from "@/components/ui/alert-card";
-import { Aviso } from "@/components/ui/aviso";
-import { DashboardCard } from "@/components/ui/dashboard-card";
-import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { CircleCheckBig, Info, Plus, RefreshCw } from "lucide-react";
+import { AlertCard, NIVELES_ALERTA, type NivelAlerta, type TipoAlerta } from "@/components/ui/alert-card";
+import { Button } from "@/components/ui/button";
+import { Grupo } from "@/components/ui/grupo";
+import { Hoja } from "@/components/ui/hoja";
 import { Input } from "@/components/ui/input";
-import { SectionHeading } from "@/components/ui/section-heading";
-import { actualizarAlertasAhora, crearAlertaManual, cerrarAlerta, cancelarAlerta } from "./actions";
+import { PageHeader } from "@/components/page-header";
+import { Segmentado } from "@/components/ui/segmentado";
+import { Textarea } from "@/components/ui/textarea";
+import { actualizarAlertasAhora, crearAlertaManual, cerrarAlerta } from "./actions";
 
 export type AlertaVista = {
   id: string;
@@ -40,6 +42,8 @@ export type FuenteEstado = {
 };
 
 type Filtro = "todas" | "meteorologicas" | "hidrologicas" | "institucionales" | "vigentes" | "historial";
+type TipoCrear = "meteorologica" | "hidrologica" | "defensa_civil";
+type NivelCrear = "amarilla" | "naranja" | "roja";
 
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: "todas", label: "Todas" },
@@ -50,24 +54,75 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "historial", label: "Historial" },
 ];
 
-function fmt(iso: string | null) {
+const NIVELES_CREAR = [
+  { valor: "amarilla", etiqueta: "Amarilla" },
+  { valor: "naranja", etiqueta: "Naranja" },
+  { valor: "roja", etiqueta: "Roja" },
+] as const;
+
+function hora(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return new Intl.DateTimeFormat("es-AR", {
     timeZone: "America/Argentina/Tucuman",
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).format(d);
 }
 
-function vigencia(a: AlertaVista) {
-  const d = fmt(a.desde);
-  const h = fmt(a.hasta);
-  if (d && h) return `${d} a ${h}`;
-  if (h) return `Hasta ${h}`;
-  if (d) return `Desde ${d}`;
+function fmtCorta(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone: "America/Argentina/Tucuman",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
+
+function vigenciaCorta(a: AlertaVista): string | null {
+  const desde = fmtCorta(a.desde);
+  const hasta = fmtCorta(a.hasta);
+  if (desde && hasta) return `${desde} a ${hasta}`;
+  if (hasta) return `Hasta ${hasta}`;
+  if (desde) return `Desde ${desde}`;
   return null;
+}
+
+function esCortoPlazo(a: AlertaVista): boolean {
+  return /^aviso\b/i.test((a.titulo || a.fenomeno || "").trim());
+}
+
+function AvisoLocal({ texto, tipo }: { texto: string; tipo: "ok" | "error" }) {
+  return (
+    <p
+      role={tipo === "error" ? "alert" : "status"}
+      className={`rounded-[14px] px-4 py-3 text-[15px] ${tipo === "error" ? "bg-red-tint text-red" : "bg-green-tint text-green-ink"}`}
+    >
+      {texto}
+    </p>
+  );
+}
+
+function FilaEstado({ titulo, detalle, ok = false }: { titulo: string; detalle?: string | null; ok?: boolean }) {
+  const Icono = ok ? CircleCheckBig : Info;
+  return (
+    <Grupo>
+      <div className="fila flex items-center gap-3 px-4 py-3">
+        <Icono size={22} strokeWidth={1.75} className={`shrink-0 ${ok ? "text-green-ink" : "text-label-2"}`} aria-hidden />
+        <div className="min-w-0">
+          <p className="text-[17px] font-medium text-label">{titulo}</p>
+          {detalle ? <p className="num text-[13px] text-label-2">{detalle}</p> : null}
+        </div>
+      </div>
+    </Grupo>
+  );
 }
 
 export function AlertasClient({
@@ -83,19 +138,23 @@ export function AlertasClient({
 }) {
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [msg, setMsg] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
+  const [hojaCrear, setHojaCrear] = useState(false);
+  const [tipoCrear, setTipoCrear] = useState<TipoCrear>("meteorologica");
+  const [nivelCrear, setNivelCrear] = useState<NivelCrear>("amarilla");
+  const [descripcionAbierta, setDescripcionAbierta] = useState<AlertaVista | null>(null);
+  const [cerrando, setCerrando] = useState<AlertaVista | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const vigentes = useMemo(() => alertasIniciales.filter((a) => a.estado_calculado === "vigente"), [alertasIniciales]);
+
   const filtradas = useMemo(() => {
-    return alertasIniciales.filter((a) => {
-      if (filtro === "vigentes") return a.estado_calculado === "vigente";
-      if (filtro === "historial") return a.estado_calculado !== "vigente";
-      if (filtro === "meteorologicas") return a.tipo_fuente === "meteorologica";
-      if (filtro === "hidrologicas") return a.tipo_fuente === "hidrologica";
-      if (filtro === "institucionales") return a.tipo_fuente === "institucional";
-      return true;
-    });
-  }, [alertasIniciales, filtro]);
+    if (filtro === "historial") return alertasIniciales.filter((a) => a.estado_calculado !== "vigente");
+    if (filtro === "meteorologicas") return vigentes.filter((a) => a.tipo_fuente === "meteorologica");
+    if (filtro === "hidrologicas") return vigentes.filter((a) => a.tipo_fuente === "hidrologica");
+    if (filtro === "institucionales") return vigentes.filter((a) => a.tipo_fuente === "institucional");
+    return vigentes;
+  }, [alertasIniciales, filtro, vigentes]);
 
   const onActualizar = () => {
     setMsg(null);
@@ -110,27 +169,24 @@ export function AlertasClient({
     });
   };
 
-  const onCerrar = (id: string) => {
+  const cerrar = (a: AlertaVista) => {
+    setMsg(null);
     startTransition(async () => {
-      const r = await cerrarAlerta(id);
+      const r = await cerrarAlerta(a.id);
       if (r.ok) {
-        setMsg({ tipo: "ok", texto: "Alerta marcada como vencida." });
+        setMsg({ tipo: "ok", texto: "Alerta cerrada." });
         router.refresh();
       } else {
         setMsg({ tipo: "error", texto: r.error });
       }
     });
   };
-  const onCancelar = (id: string) => {
-    startTransition(async () => {
-      const r = await cancelarAlerta(id);
-      if (r.ok) {
-        setMsg({ tipo: "ok", texto: "Alerta cancelada." });
-        router.refresh();
-      } else {
-        setMsg({ tipo: "error", texto: r.error });
-      }
-    });
+
+  const confirmarCierre = () => {
+    const a = cerrando;
+    if (!a) return;
+    setCerrando(null);
+    cerrar(a);
   };
 
   const onCrear = (formData: FormData) => {
@@ -138,7 +194,8 @@ export function AlertasClient({
     startTransition(async () => {
       const r = await crearAlertaManual(formData);
       if (r.ok) {
-        setMsg({ tipo: "ok", texto: "Alerta creada." });
+        setHojaCrear(false);
+        setMsg({ tipo: "ok", texto: "Alerta publicada." });
         router.refresh();
       } else {
         setMsg({ tipo: "error", texto: r.error });
@@ -146,145 +203,189 @@ export function AlertasClient({
     });
   };
 
-  const smnOk = !!fuenteSmn.ultimo_ok && !fuenteSmn.ultimo_error;
   const smnFallo = !!fuenteSmn.ultimo_error;
-  const smnUltima = fmt(fuenteSmn.ultima_verificacion) || fmt(fuenteSmn.ultimo_ok);
+  const actualizadoFeed = hora(fuenteSmn.ultimo_ok ?? fuenteSmn.ultima_verificacion ?? vigentes[0]?.actualizada_en);
+  const ultimaSinVigentes = hora(fuenteSmn.ultima_verificacion ?? fuenteSmn.ultimo_ok);
+  const tipoDb = tipoCrear === "defensa_civil" ? "institucional" : tipoCrear;
+  const fuenteCrear = tipoCrear === "meteorologica" ? "Servicio Meteorológico Nacional" : "Defensa Civil";
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 px-4 py-6 sm:px-6">
-      <SectionHeading
+    <>
+      <PageHeader
         titulo="Alertas"
-        descripcion="Alertas meteorológicas, hidrológicas e institucionales para la zona del cuartel. SIGOV informa y coordina; no reemplaza al SMN, Defensa Civil, la radio ni la sirena."
+        acciones={
+          <>
+            {oficial ? (
+              <button
+                type="button"
+                onClick={onActualizar}
+                disabled={isPending}
+                aria-label="Actualizar ahora"
+                className="tap flex h-11 w-11 items-center justify-center gap-2 rounded-[14px] bg-surface-2 text-label-2 transition-colors hover:bg-surface sm:w-auto sm:px-4"
+              >
+                <RefreshCw size={22} strokeWidth={1.75} className={isPending ? "animate-spin" : ""} aria-hidden />
+                <span className="hidden text-[15px] font-semibold sm:inline">Actualizar ahora</span>
+              </button>
+            ) : null}
+            {oficial ? (
+              <button
+                type="button"
+                onClick={() => { setMsg(null); setHojaCrear(true); }}
+                aria-label="Cargar alerta"
+                className="tap flex h-11 w-11 items-center justify-center gap-2 rounded-[14px] bg-red px-3 text-surface transition-colors hover:bg-red-pressed sm:w-auto"
+              >
+                <Plus size={22} strokeWidth={1.75} aria-hidden />
+                <span className="hidden text-[15px] font-semibold sm:inline">Cargar alerta</span>
+              </button>
+            ) : null}
+          </>
+        }
       />
 
-      {msg ? <Aviso variante={msg.tipo === "ok" ? "ok" : "error"}>{msg.texto}</Aviso> : null}
-      {errorCarga ? <Aviso variante="error">{errorCarga}</Aviso> : null}
-
-      <DashboardCard titulo="Estado de fuentes" descripcion="Última consulta de la fuente meteorológica (SMN).">
-        <div className="space-y-2 text-[15px] text-ink-muted">
-          {smnFallo ? (
-            <p className="text-error-text">No se pudo consultar la fuente (SMN). Se conserva la última información válida disponible.</p>
-          ) : smnOk ? (
-            <p>Fuente SMN consultada correctamente.</p>
-          ) : (
-            <p>La fuente SMN aún no fue consultada.</p>
-          )}
-          <p className="font-mono text-[15px] uppercase tracking-widest text-ink-secondary">
-            Última actualización: {smnUltima ?? "sin datos"}
-          </p>
-          <p className="text-[15px]">Hidrología: sin fuente oficial automatizable verificada para la zona; las alertas hidrológicas se cargan de forma manual.</p>
-        </div>
-        {oficial ? (
-          <div className="mt-3">
-            <button
-              type="button"
-              onClick={onActualizar}
-              disabled={isPending}
-              className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-[15px] font-semibold text-ink hover:bg-surface-hover disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} aria-hidden />
-              Actualizar ahora
-            </button>
-          </div>
-        ) : null}
-      </DashboardCard>
-
-      <div className="flex flex-wrap gap-2">
-        {FILTROS.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFiltro(f.id)}
-            className={`min-h-11 rounded-full border px-4 text-[15px] font-semibold transition-colors ${
-              filtro === f.id ? "border-fire bg-fire/15 text-ink" : "border-line bg-surface text-ink-muted hover:bg-surface-hover hover:text-ink"
-            }`}
-            aria-pressed={filtro === f.id}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <section className="space-y-3">
-        {filtradas.length === 0 ? (
-          <EstadoVacio
-            icono="ShieldCheck"
-            titulo={smnFallo ? "No se pudo consultar la fuente" : "No hay alertas vigentes"}
-            texto={smnFallo
-              ? "No fue posible obtener información actualizada de la fuente. Se muestra el estado conocido."
-              : "No hay alertas para mostrar con este filtro."}
+      <div className="no-print mx-auto w-full max-w-[1100px] space-y-6 px-4 pb-8 pt-4">
+        {msg ? <AvisoLocal texto={msg.texto} tipo={msg.tipo} /> : null}
+        {errorCarga ? <AvisoLocal texto={errorCarga} tipo="error" /> : null}
+        {smnFallo ? (
+          <AvisoLocal
+            texto={`No se pudo actualizar el feed. Se muestra la última información conocida.${actualizadoFeed ? ` Actualizado a las ${actualizadoFeed}.` : ""}`}
+            tipo="error"
           />
+        ) : null}
+
+        <Grupo>
+          <div className="flex gap-2 overflow-x-auto p-2" role="group" aria-label="Filtro de alertas">
+            {FILTROS.map((f) => {
+              const activo = filtro === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFiltro(f.id)}
+                  aria-pressed={activo}
+                  className={`tap min-h-11 shrink-0 rounded-full px-4 text-[15px] font-medium transition-colors ${
+                    activo ? "bg-red-tint text-red" : "bg-surface-2 text-label-2 hover:bg-bg"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+        </Grupo>
+
+        {filtradas.length === 0 ? (
+          vigentes.length === 0 && filtro !== "historial" ? (
+            <FilaEstado titulo="Sin alertas vigentes" detalle={`Última actualización ${ultimaSinVigentes ?? "sin datos"}`} ok />
+          ) : (
+            <FilaEstado titulo={filtro === "historial" ? "No hay alertas en el historial" : "No hay alertas con este filtro"} />
+          )
         ) : (
-          filtradas.map((a) => (
-            <div key={a.id} className="space-y-2">
+          <div className="space-y-4">
+            {filtradas.map((a) => (
               <AlertCard
+                key={a.id}
                 tipo={a.tipo_fuente}
                 nivel={a.nivel}
                 titulo={a.titulo || a.fenomeno || "Alerta"}
                 descripcion={a.descripcion || undefined}
                 area={a.area || undefined}
                 fuente={a.fuente_nombre}
-                vigencia={vigencia(a) ?? undefined}
-                ultimaActualizacion={fmt(a.ultima_verificacion) ?? undefined}
+                vigencia={vigenciaCorta(a) ?? undefined}
+                ultimaActualizacion={fmtCorta(a.ultima_verificacion) ?? fmtCorta(a.actualizada_en) ?? undefined}
+                finalizada={a.estado_calculado !== "vigente"}
+                cortoPlazo={esCortoPlazo(a)}
+                onVerMas={a.descripcion ? () => setDescripcionAbierta(a) : undefined}
+                onCerrar={oficial && a.estado_calculado === "vigente" && a.origen === "manual" ? () => setCerrando(a) : undefined}
               />
-              {oficial && a.estado_calculado === "vigente" && a.origen === "manual" ? (
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => onCerrar(a.id)} disabled={isPending} className="min-h-11 rounded-[10px] border border-line bg-surface px-3 text-[15px] font-semibold text-ink hover:bg-surface-hover disabled:opacity-50">Marcar vencida</button>
-                  <button type="button" onClick={() => onCancelar(a.id)} disabled={isPending} className="min-h-11 rounded-[10px] border border-line bg-surface px-3 text-[15px] font-semibold text-ink hover:bg-surface-hover disabled:opacity-50">Cancelar</button>
-                </div>
-              ) : null}
-              {oficial && a.estado_calculado !== "vigente" ? (
-                <p className="font-mono text-[15px] uppercase tracking-widest text-ink-secondary">
-                  {a.estado_calculado === "cancelada" ? "Cancelada / reemplazada" : "Vencida"} · {a.origen === "automatico" ? "Automática" : "Manual"}
-                </p>
-              ) : null}
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </section>
+      </div>
 
-      {oficial ? (
-        <DashboardCard titulo="Carga manual de alerta" descripcion="Para alertas hidrológicas o avisos de Defensa Civil u otra autoridad. Queda registrado quién la cargó.">
-          <form action={onCrear} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-[15px] font-semibold text-ink">Tipo
-                <select name="tipo_fuente" required className="min-h-11 rounded-lg border border-line bg-bg-subtle px-3 text-[15px] text-ink">
-                  <option value="institucional">Institucional</option>
-                  <option value="hidrologica">Hidrológica</option>
-                  <option value="meteorologica">Meteorológica</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-[15px] font-semibold text-ink">Nivel
-                <select name="nivel" required className="min-h-11 rounded-lg border border-line bg-bg-subtle px-3 text-[15px] text-ink">
-                  <option value="informativa">Informativa</option>
-                  <option value="amarilla">Amarilla</option>
-                  <option value="naranja">Naranja</option>
-                  <option value="roja">Roja</option>
-                </select>
-              </label>
-            </div>
-            <Input name="fenomeno" label="Fenómeno (opcional)" placeholder="Ej. Crecida, lluvia intensa" />
-            <Input name="titulo" label="Título" required maxLength={200} />
-            <label className="flex flex-col gap-1 text-[15px] font-semibold text-ink">Descripción
-              <textarea name="descripcion" rows={3} maxLength={2000} className="rounded-lg border border-line bg-bg-subtle px-3 py-2 text-[15px] text-ink" />
-            </label>
-            <Input name="area" label="Área / zona" placeholder="Ej. Zona norte, Tucumán" />
-            <Input name="fuente_nombre" label="Fuente" required placeholder="Ej. Defensa Civil Tucumán" />
-            <Input name="fuente_url" label="URL de la fuente (opcional)" placeholder="https://..." />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1 text-[15px] font-semibold text-ink">Inicio (opcional)
-                <input type="datetime-local" name="desde" className="min-h-11 rounded-lg border border-line bg-bg-subtle px-3 text-[15px] text-ink" />
-              </label>
-              <label className="flex flex-col gap-1 text-[15px] font-semibold text-ink">Vencimiento (opcional)
-                <input type="datetime-local" name="hasta" className="min-h-11 rounded-lg border border-line bg-bg-subtle px-3 text-[15px] text-ink" />
-              </label>
-            </div>
-            <button type="submit" disabled={isPending} className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-fire/60 bg-fire px-4 text-[15px] font-semibold text-ink hover:bg-fire-dark disabled:opacity-50">
-              <ShieldAlert className="h-4 w-4" aria-hidden /> Publicar alerta
-            </button>
-          </form>
-        </DashboardCard>
-      ) : null}
-    </div>
+      <Hoja
+        open={descripcionAbierta !== null}
+        onClose={() => setDescripcionAbierta(null)}
+        title={descripcionAbierta?.titulo ?? "Alerta"}
+      >
+        <p className="whitespace-pre-wrap text-[17px] leading-[1.45] text-label">{descripcionAbierta?.descripcion}</p>
+      </Hoja>
+
+      <Hoja
+        open={hojaCrear}
+        onClose={() => { if (!isPending) setHojaCrear(false); }}
+        title="Cargar alerta"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button type="submit" form="form-cargar-alerta" className="w-full" disabled={isPending}>
+              {isPending ? "Publicando…" : "Publicar"}
+            </Button>
+            <Button type="button" variant="secondary" className="w-full" onClick={() => setHojaCrear(false)}>
+              Cancelar
+            </Button>
+          </div>
+        }
+      >
+        <form id="form-cargar-alerta" action={onCrear} className="space-y-4">
+          <input type="hidden" name="tipo_fuente" value={tipoDb} />
+          <input type="hidden" name="nivel" value={nivelCrear} />
+          <input type="hidden" name="fuente_nombre" value={fuenteCrear} />
+
+          <Segmentado
+            etiqueta="Tipo de alerta"
+            opciones={[
+              { valor: "meteorologica", etiqueta: "Meteorológica" },
+              { valor: "hidrologica", etiqueta: "Hidrológica" },
+              { valor: "defensa_civil", etiqueta: "Defensa Civil" },
+            ]}
+            valor={tipoCrear}
+            onChange={(valor) => setTipoCrear(valor as TipoCrear)}
+          />
+
+          <div role="group" aria-label="Nivel" className="flex min-h-[50px] items-center gap-1 rounded-[14px] bg-surface-2 p-1">
+            {NIVELES_CREAR.map((n) => {
+              const activo = nivelCrear === n.valor;
+              return (
+                <button
+                  key={n.valor}
+                  type="button"
+                  aria-pressed={activo}
+                  onClick={() => setNivelCrear(n.valor)}
+                  className={`tap min-h-11 flex-1 rounded-[14px] px-2 text-[15px] font-medium transition-colors duration-200 ${
+                    activo ? NIVELES_ALERTA[n.valor].chip : "text-label-2"
+                  }`}
+                >
+                  {n.etiqueta}
+                </button>
+              );
+            })}
+          </div>
+
+          <Input id="titulo" name="titulo" label="Título" required maxLength={200} />
+          <Textarea id="descripcion" name="descripcion" label="Descripción" rows={4} maxLength={2000} />
+          <Input id="area" name="area" label="Área / zona" maxLength={200} />
+          <Input id="desde" name="desde" type="datetime-local" label="Desde" />
+          <Input id="hasta" name="hasta" type="datetime-local" label="Hasta" />
+          <p className="num text-[13px] text-label-2">Fuente: {fuenteCrear}</p>
+        </form>
+      </Hoja>
+
+      <Hoja
+        open={cerrando !== null}
+        onClose={() => setCerrando(null)}
+        title="Cerrar alerta"
+        footer={
+          <div className="flex flex-col-reverse gap-2">
+            <Button type="button" variant="secondary" className="w-full" onClick={() => setCerrando(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="danger" className="w-full" onClick={confirmarCierre}>
+              Cerrar alerta
+            </Button>
+          </div>
+        }
+      >
+        <p>¿Cerrar «{cerrando?.titulo}»? La alerta va a pasar al historial.</p>
+      </Hoja>
+    </>
   );
 }

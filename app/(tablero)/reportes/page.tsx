@@ -37,7 +37,7 @@ const TONOS: TonoGrafico[] = ["red", "yellow", "green", "ink"];
 function mesCorto(mes: string): string { return `${mes.slice(5)}/${mes.slice(2, 4)}`; }
 
 function TablaReporte({ columnas, filas, compacta = false }: { columnas: ColumnaTabla[]; filas: FilaTabla[]; compacta?: boolean }) {
-  const th = compacta ? "" : "px-3 py-3 text-[13px] font-medium uppercase tracking-[.3px] text-label-2";
+  const th = compacta ? "" : "px-3 py-3 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase";
   const td = compacta ? "" : "px-3 py-3 text-[15px] text-label";
   return (
     <div className={compacta ? "" : "overflow-x-auto"}>
@@ -181,8 +181,8 @@ export default async function ReportesPage({ searchParams }: Props) {
 
       <section className="print-only reportes-print" aria-label="Reporte para impresión">
         <header className="planilla-encabezado">
-          <p className="font-mono uppercase tracking-widest">{PRODUCTO.nombre} · Reportes</p>
-          <p className="heading-display text-lg">{CUARTEL.nombre}</p>
+          <p className="text-[13px]">{PRODUCTO.nombre} · Reportes</p>
+          <p className="text-[22px] font-bold">{CUARTEL.nombre}</p>
           <p>{etiquetaRango(rango)}</p>
         </header>
         <h2>Resumen</h2>

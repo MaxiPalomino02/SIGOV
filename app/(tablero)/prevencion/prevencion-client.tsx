@@ -170,14 +170,14 @@ export function PrevencionClient({
         <section className="rounded-[16px] bg-surface p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Conteo del mes</p>
+              <p className="text-[13px] text-label-2">Conteo del mes</p>
               <p className="mt-1 text-[17px] font-semibold text-label">{etiquetaMesLarga(mesSeleccionado)}</p>
             </div>
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, -1))} aria-label="Mes anterior" className="flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition active:scale-[.97] active:opacity-85 hover:bg-surface-2">
+              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, -1))} aria-label="Mes anterior" className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition-colors duration-200 hover:bg-surface-2">
                 <ChevronLeft size={22} strokeWidth={1.75} aria-hidden />
               </button>
-              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, 1))} aria-label="Mes siguiente" className="flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition active:scale-[.97] active:opacity-85 hover:bg-surface-2">
+              <button type="button" onClick={() => setMesSeleccionado((m) => moverMes(m, 1))} aria-label="Mes siguiente" className="tap flex h-11 w-11 items-center justify-center rounded-[14px] text-label-2 transition-colors duration-200 hover:bg-surface-2">
                 <ChevronRight size={22} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
@@ -214,7 +214,7 @@ export function PrevencionClient({
                 return (
                   <li key={actividad.id} className="fila relative">
                     <button type="button" onClick={() => setSeleccionadoId(actividad.id)} className="absolute inset-0" aria-label={`Ver ${ETIQUETAS_TIPO_ACTIVIDAD[actividad.tipo].toLowerCase()} en ${actividad.lugar}`} />
-                    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-surface-2 text-label-2 pointer-events-none">
+                    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-surface-2 text-label-2 pointer-events-none">
                       <Icono size={22} strokeWidth={1.75} aria-hidden />
                     </span>
                     <div className="relative z-10 min-w-0 flex-1 py-3 pointer-events-none">
@@ -394,7 +394,7 @@ function AltaActividadHoja({
         {paso === 1 ? (
           <>
             <fieldset>
-              <legend className="mb-2 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Tipo</legend>
+              <legend className="mb-2 text-[13px] text-label-2">Tipo</legend>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {TIPOS_ACTIVIDAD_PREVENCION.map((item) => {
                   const Icono = ICONOS_TIPO[item.value];
@@ -405,7 +405,7 @@ function AltaActividadHoja({
                       type="button"
                       aria-pressed={activo}
                       onClick={() => setTipo(item.value)}
-                      className={`flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-[16px] border p-3 text-center transition active:scale-[.97] active:opacity-85 ${activo ? "border-red bg-red-tint text-label" : "border-separator bg-surface-2 text-label-2"}`}
+                      className={`tap flex min-h-[88px] flex-col items-center justify-center gap-2 rounded-[16px] border p-3 text-center transition-colors duration-200 ${activo ? "border-red bg-red-tint text-label" : "border-separator bg-surface-2 text-label-2"}`}
                     >
                       <Icono size={22} strokeWidth={1.75} className={activo ? "text-red" : "text-label-2"} aria-hidden />
                       <span className="text-[13px] font-semibold">{item.label}</span>
@@ -428,7 +428,7 @@ function AltaActividadHoja({
 
             <div className="space-y-3">
               <div>
-                <p className="text-[13px] font-medium uppercase tracking-[.3px] text-label-2">Fotos</p>
+                <p className="text-[13px] text-label-2">Fotos</p>
                 <p className="mt-1 text-[13px] text-label-2">Opcional. Hasta {MAX_FOTOS_PREVENCION} fotos. Pegá un enlace http(s) o una ruta que empiece con /.</p>
               </div>
               <div className="flex gap-2">
@@ -440,14 +440,14 @@ function AltaActividadHoja({
               {fotos.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {fotos.map((foto, index) => (
-                    <div key={`${foto}-${index}`} className="group relative h-[72px] overflow-hidden rounded-[12px] bg-surface-2">
+                    <div key={`${foto}-${index}`} className="group relative h-[72px] overflow-hidden rounded-[16px] bg-surface-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={foto} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setFotos((actuales) => actuales.filter((_, i) => i !== index))}
                         aria-label={`Quitar foto ${index + 1}`}
-                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 text-label shadow-sm"
+                        className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 text-label shadow-[0_1px_2px_rgba(0,0,0,.04)]"
                       >
                         <Trash2 size={14} strokeWidth={1.75} aria-hidden />
                       </button>
@@ -456,7 +456,7 @@ function AltaActividadHoja({
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  <div className="flex h-[72px] items-center justify-center rounded-[12px] bg-surface-2 text-label-3">
+                  <div className="flex h-[72px] items-center justify-center rounded-[16px] bg-surface-2 text-label-3">
                     <ImageIcon size={22} strokeWidth={1.75} aria-hidden />
                   </div>
                 </div>
@@ -512,7 +512,7 @@ function FichaActividadHoja({
           {actividad.fotos.length > 0 ? (
             <div className="grid grid-cols-3 gap-2 p-3">
               {actividad.fotos.map((foto, index) => (
-                <button key={`${foto}-${index}`} type="button" onClick={() => onVerFoto(foto)} className="aspect-square overflow-hidden rounded-[12px] bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red" aria-label={`Abrir foto ${index + 1}`}>
+                <button key={`${foto}-${index}`} type="button" onClick={() => onVerFoto(foto)} className="aspect-square overflow-hidden rounded-[16px] bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red" aria-label={`Abrir foto ${index + 1}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={foto} alt={`Foto ${index + 1} de la actividad`} className="h-full w-full object-cover" />
                 </button>

@@ -33,7 +33,7 @@ export function SectionHeading({
     return (
       <div
         role="alert"
-        className={`flex items-center gap-2 rounded-[12px] border border-error-border bg-error-light px-3 py-2 text-[14px] text-error-text ${className}`}
+        className={`flex items-center gap-2 rounded-[12px] border border-red bg-red-tint px-3 py-2 text-[15px] text-red ${className}`}
       >
         <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
         <span>{error}</span>
@@ -43,7 +43,7 @@ export function SectionHeading({
   if (empty || !titulo) {
     return (
       <div className={className}>
-        <p className="text-[14px] text-ink-muted">Sin sección para mostrar.</p>
+        <p className="text-[15px] text-label-2">Sin sección para mostrar.</p>
       </div>
     );
   }
@@ -51,9 +51,9 @@ export function SectionHeading({
   return (
     <div className={`flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between ${className}`}>
       <div className="min-w-0">
-        <h1 className="titulo-pagina">{titulo}</h1>
+        <h1 className="text-[34px] font-bold tracking-[-.4px]">{titulo}</h1>
         {descripcion ? (
-          <p className="texto-aux mt-1 max-w-3xl">{descripcion}</p>
+          <p className="text-[15px] mt-1 max-w-3xl">{descripcion}</p>
         ) : null}
       </div>
       {accion ? <div className="shrink-0">{accion}</div> : null}

@@ -38,7 +38,7 @@ export function Select({
           id={selectId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={`min-h-[50px] w-full appearance-none rounded-[14px] border border-separator bg-surface-2 py-3 pl-4 pr-11 text-[17px] text-label transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+          className={`min-h-[50px] w-full appearance-none rounded-[14px] border border-separator bg-surface-2 py-3 pl-4 pr-11 text-[17px] text-label transition-colors focus:border-red focus:outline-2 focus:outline-offset-2 focus:outline-red disabled:cursor-not-allowed disabled:text-label-2 disabled:bg-surface-2 ${className}`}
           {...props}
         >
           {children}

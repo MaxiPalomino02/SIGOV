@@ -107,7 +107,7 @@ export function BotonAlarma() {
     <Link
       href="/alarma"
       aria-label="Alarma del cuartel"
-      className="tap inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-red px-4 text-[15px] font-semibold text-surface transition-colors hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
+      className="tap inline-flex h-11 items-center justify-center gap-2 rounded-[14px] bg-red px-4 text-[15px] font-semibold text-surface transition-colors duration-200 hover:bg-red-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
     >
       <Siren size={22} strokeWidth={1.75} aria-hidden />
       <span>Alarma</span>
@@ -132,7 +132,7 @@ export function Sidebar({
   return (
     <aside className="no-print fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-separator bg-surface lg:flex">
       <div className="flex h-20 shrink-0 items-center gap-3 border-b border-separator px-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-surface-2">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-surface-2">
           <IsotipoSigov size={40} priority alt="" />
         </span>
         <span className="min-w-0">
@@ -144,7 +144,7 @@ export function Sidebar({
       <nav aria-label="Secciones del cuartel" className="flex-1 overflow-y-auto px-3 py-5">
         {grupos.map((grupo) => (
           <section key={grupo.titulo} className="mb-6">
-            <h2 className="mb-2 px-3 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">
+            <h2 className="mb-2 px-3 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">
               {grupo.titulo}
             </h2>
             <div className="space-y-1">
@@ -156,7 +156,7 @@ export function Sidebar({
                     key={item.href}
                     href={item.href}
                     aria-current={activo ? "page" : undefined}
-                    className={`tap flex min-h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                    className={`tap flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-[15px] font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
                       activo ? "bg-red-tint text-red" : "text-label hover:bg-surface-2"
                     }`}
                   >

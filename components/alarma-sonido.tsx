@@ -74,10 +74,10 @@ export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }
       <button
         type="button"
         onClick={activar}
-        className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wider ${
+        className={`tap inline-flex min-h-11 items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
           habilitado
-            ? "border-ok/40 bg-ok-light text-ok"
-            : "border-alarm-border bg-alarm-light text-alarm"
+            ? "border-green bg-green-tint text-green-ink"
+            : "border-red bg-red-tint text-red"
         }`}
         aria-label={habilitado ? "Sonido de alarma activado" : "Sonido de alarma desactivado. Tocar para activar"}
       >
@@ -90,10 +90,10 @@ export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-widest ${
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-semibold ${
           habilitado
-            ? "border-ok/40 bg-ok-light text-ok"
-            : "border-alarm-border bg-alarm-light text-alarm"
+            ? "border-green bg-green-tint text-green-ink"
+            : "border-red bg-red-tint text-red"
         }`}
       >
         {habilitado ? <Volume2 className="h-3.5 w-3.5" aria-hidden /> : <VolumeX className="h-3.5 w-3.5" aria-hidden />}
@@ -102,7 +102,7 @@ export function IndicadorSonidoAlarma({ compact = false }: { compact?: boolean }
       <button
         type="button"
         onClick={activar}
-        className="inline-flex min-h-11 items-center rounded-[10px] border border-line bg-surface px-3 text-[13px] font-semibold text-ink hover:bg-surface-hover"
+        className="tap inline-flex min-h-11 items-center rounded-[14px] border border-separator bg-surface px-3 text-[13px] font-semibold text-label transition-colors duration-200 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red"
       >
         {habilitado ? "Probar sonido" : "Activar sonido"}
       </button>

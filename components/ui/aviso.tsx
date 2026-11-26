@@ -14,24 +14,24 @@ const ESTILOS: Record<
   { contenedor: string; icono: LucideIcon; iconoClase: string }
 > = {
   info: {
-    contenedor: "border-ink-muted/40 bg-bg-subtle text-ink",
+    contenedor: "border-separator bg-surface-2 text-label",
     icono: Info,
-    iconoClase: "text-ink-muted",
+    iconoClase: "text-label-2",
   },
   ok: {
-    contenedor: "border-ok/60 bg-ok/10 text-ink",
+    contenedor: "border-green bg-green-tint text-label",
     icono: CircleCheckBig,
-    iconoClase: "text-ok",
+    iconoClase: "text-green-ink",
   },
   alerta: {
-    contenedor: "border-alarm/60 bg-alarm/10 text-ink",
+    contenedor: "border-red bg-red-tint text-label",
     icono: TriangleAlert,
-    iconoClase: "text-alarm",
+    iconoClase: "text-red",
   },
   error: {
-    contenedor: "border-fire/60 bg-fire/10 text-ink",
+    contenedor: "border-red bg-red-tint text-label",
     icono: CircleX,
-    iconoClase: "text-fire-soft",
+    iconoClase: "text-red",
   },
 };
 
@@ -53,16 +53,16 @@ export function Aviso({
   return (
     <div
       role={variante === "error" ? "alert" : undefined}
-      className={`flex items-start gap-3 rounded-xl border-l-4 px-4 py-3 ${contenedor} ${className}`}
+      className={`flex items-start gap-3 rounded-[16px] border-l px-4 py-3 ${contenedor} ${className}`}
     >
       <Icono className={`mt-0.5 h-5 w-5 shrink-0 ${iconoClase}`} aria-hidden />
       <div className="min-w-0">
         {titulo ? (
-          <p className="heading-display text-sm tracking-wide text-ink">{titulo}</p>
+          <p className="text-[17px] font-semibold text-label">{titulo}</p>
         ) : null}
         {children ? (
           <div
-            className={`text-[16px] leading-relaxed text-ink-muted ${
+            className={`text-[17px] leading-relaxed text-label-2 ${
               titulo ? "mt-0.5" : ""
             }`}
           >

@@ -12,7 +12,7 @@ function BadgeNumero({ valor }: { valor: number }) {
   if (valor <= 0) return null;
   return (
     <span
-      className="num absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red px-1 text-[10px] font-semibold text-surface"
+      className="num absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red px-1 text-[12px] font-semibold text-surface"
       aria-label={`${valor} no leídos`}
     >
       {valor}
@@ -55,7 +55,7 @@ export function BottomNav({
                 key={item.href}
                 href={item.href}
                 aria-current={activo ? "page" : undefined}
-                className={`tap flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+                className={`tap flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[12px] font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
                   activo ? "text-red" : "text-label-2"
                 }`}
               >
@@ -73,7 +73,7 @@ export function BottomNav({
             aria-haspopup="dialog"
             aria-expanded={masAbierto}
             onClick={() => setMasAbierto(true)}
-            className={`tap flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[10px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
+            className={`tap flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[12px] font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
               masActivo ? "text-red" : "text-label-2"
             }`}
           >
@@ -87,7 +87,7 @@ export function BottomNav({
         <div className="space-y-6">
           {grupos.map((grupo) => (
             <section key={grupo.titulo}>
-              <h2 className="mb-2 text-[13px] font-medium uppercase tracking-[.3px] text-label-2">
+              <h2 className="mb-2 text-[13px] font-normal tracking-[.3px] text-label-2 uppercase">
                 {grupo.titulo}
               </h2>
               <div className="grupo">
