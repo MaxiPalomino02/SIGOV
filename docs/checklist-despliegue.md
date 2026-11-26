@@ -14,7 +14,8 @@
 | `SUPABASE_SERVICE_ROLE_KEY` | Sí | Escrituras del servidor |
 | `SESSION_SECRET` | Sí | Firma de la cookie |
 | `CRON_SECRET` | Sí | Protección de crons |
-| `VAPID_PUBLIC_KEY` | No | Permiso push |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | No | Permiso push |
+| `VAPID_PUBLIC_KEY` | No | Alias compatible |
 | `VAPID_PRIVATE_KEY` | Sí | Firma push |
 | `VAPID_SUBJECT` | Sí | `https://` o `mailto:` |
 
@@ -22,7 +23,7 @@ Generar secretos con `node -e "console.log(require('crypto').randomBytes(32).toS
 
 ## 3. SQL Editor
 
-Ejecutar en orden: `schema.sql`, `rpc.sql`, una seed (`seed.sql` real, `seed_dev.sql` o `seed_demo.sql` ficticia), `migracion_cupo_5.sql` solo en bases viejas, y migraciones `010`, `021`, `030`, `040`, `050`, `051`, `060`, `070`, `071`, `072`, `080`, `090`, `100`, `110`, `120`, `130`, `140`. `020` es legada. Las corre el humano; nunca desde código. No editar `schema.sql` ni `rpc.sql`.
+Ejecutar en orden: `schema.sql`, `rpc.sql`, una seed (`seed.sql` real, `seed_dev.sql` o `seed_demo.sql` ficticia), `migracion_cupo_5.sql` solo en bases viejas, y migraciones `010`, `021`, `030`, `040`, `050`, `051`, `060`, `070`, `071`, `072`, `080`, `090`, `100`, `110`, `120`, `130`, `140`, `150`. `020` es legada. Las corre el humano; nunca desde código. No editar `schema.sql` ni `rpc.sql`.
 
 La migración `140_cierre_rls_permisos.sql` deja el padrón de login accesible solo en las columnas necesarias y quita a `anon` permisos de escritura en el tablero. Es obligatoria para pasar la verificación.
 
@@ -37,7 +38,7 @@ Esperado: toda RPC responde `permission denied`; `anon` no inserta, actualiza, b
 
 ## 5. Marca
 
-Reemplazar si hace falta `public/brand/sigov-logo.png`, `sigov-isotipo.png` y `cuartel-escudo.png`. Usar proporciones originales; no deformar ni recolorear. Los datos del cuartel salen de `lib/cuartel.config.ts`.
+Reemplazar si hace falta `public/brand/LOGO SIGOV.jpg` y `public/brand/cuartel-escudo.jpg`. Usar proporciones originales; no deformar ni recolorear. Si cambiás el nombre del archivo, actualizar `lib/marca.ts` y `lib/cuartel.config.ts`. Los datos del cuartel salen de `lib/cuartel.config.ts`.
 
 ## 6. Vercel
 
@@ -47,7 +48,7 @@ Importar el repo, cargar las ocho variables en Production y deployar. Verificar 
 
 1. Entrar con un legajo de la seed y confirmar que carga `/inicio` sin datos inventados.
 2. Anotarse en una guardia, cancelarla y revisar `/historial`.
-3. Activar notificaciones en `/notificaciones`, cerrar la app y confirmar el aviso push; después verificar una alarma simulada y la planilla A4 en blanco y negro.
+3. Activar notificaciones en `/notificaciones`, probar con *Probar notificación* (solo oficiales), cerrar la app y confirmar el aviso push; después verificar una alarma simulada y la planilla A4 en blanco y negro.
 
 ## 8. Límites
 

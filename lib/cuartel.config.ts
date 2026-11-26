@@ -11,7 +11,7 @@ export const CUARTEL = {
   localidad: "La Trinidad",
   provincia: "Tucumán",
   numero: 1,
-  escudo: "/brand/cuartel-escudo.png",
+  escudo: "/brand/cuartel-escudo.jpg",
   lat: numeroEnv("CUARTEL_LAT", -26.7906),
   lng: numeroEnv("CUARTEL_LNG", -65.2156),
   zonaHoraria: "America/Argentina/Tucuman",

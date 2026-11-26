@@ -4,8 +4,8 @@ export const PRODUCTO = {
 } as const;
 
 export const LOGOS = {
-  principal: "/brand/sigov-logo.png",
-  isotipo: "/brand/sigov-isotipo.png",
+  principal: "/brand/LOGO SIGOV.jpg",
+  isotipo: "/brand/LOGO SIGOV.jpg",
 } as const;
 
 // Compatibilidad con código existente; único lugar que nombra los archivos del logo.
@@ -17,7 +17,7 @@ export const MARCA = {
     logo: LOGOS.principal,
   },
   cuartel: {
-    escudo: "/brand/cuartel-escudo.png",
+    escudo: "/brand/cuartel-escudo.jpg",
   },
 } as const;
 

@@ -26,6 +26,7 @@ yarn-error.log*
 # La única excepción es el ejemplo documentado.
 .env*
 !.env.local.example
+!.env.example
 
 # Vercel
 .vercel

@@ -12,7 +12,7 @@ Los bomberos se anotan por número de ingreso, el tablero muestra **siempre dos 
 
 ## Variables de entorno
 
-Todas están documentadas en `.env.local.example`. Copialo a `.env.local` para desarrollo
+Todas están documentadas en `.env.example` y `.env.local.example`. Copialo a `.env.local` para desarrollo
 y configurá las mismas variables en Vercel para producción.
 
 | Variable                        | Secreta | Dónde se obtiene                                                                 |
@@ -22,7 +22,8 @@ y configurá las mismas variables en Vercel para producción.
 | `SUPABASE_SERVICE_ROLE_KEY`     | **Sí**  | Supabase → Settings → API → **service_role secret**                              |
 | `SESSION_SECRET`                | **Sí**  | Generala vos (mínimo 32 caracteres). Firma el JWT de la cookie de sesión         |
 | `CRON_SECRET`                   | **Sí**  | Generala vos (mínimo 16 caracteres). Protege el endpoint del cron                 |
-| `VAPID_PUBLIC_KEY`              | No      | Generala con `npx web-push generate-vapid-keys`                                   |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`  | No      | Generala con `npx web-push generate-vapid-keys`                                   |
+| `VAPID_PUBLIC_KEY`              | No      | Alias compatible; usala si todavía no configuraste `NEXT_PUBLIC_VAPID_PUBLIC_KEY` |
 | `VAPID_PRIVATE_KEY`             | **Sí**  | Generala con `npx web-push generate-vapid-keys`                                   |
 | `VAPID_SUBJECT`                 | **Sí**  | URL `https` o `mailto:` del responsable de las notificaciones                     |
 
@@ -211,10 +212,14 @@ falla, ejecutá la migración `140` y volvé a correrlo. La checklist completa e
   tiene pantalla offline en `/offline`.
 - Las suscripciones push se gestionan en `/notificaciones`. El acceso está en *Accesos
   rápidos* de `/inicio`.
-- `VAPID_PUBLIC_KEY` se entrega al navegador; `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` quedan
-  solo en el servidor. Sin VAPID, la pantalla informa que el servicio no está configurado.
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` se entrega al navegador; `VAPID_PRIVATE_KEY` y
+  `VAPID_SUBJECT` quedan solo en el servidor. `VAPID_PUBLIC_KEY` sigue siendo un alias
+  compatible. Sin VAPID, la pantalla informa que el servicio no está configurado.
 - Las alarmas usan prioridad alta y sonido; las alertas SMN naranjas y rojas se deduplican
-  durante 30 minutos. Nada reemplaza la sirena ni la radio.
+  durante 30 minutos. Una alarma envía una sola tanda de notificaciones y guarda solo el
+  total en `alarmas.cantidad_enviados`. Nada reemplaza la sirena ni la radio.
+- La prueba manual en `localhost` requiere `npm run build && npm start` porque el service
+  worker se desregistra en `npm run dev` para no cachear el login.
 
 ## Marca y accesibilidad
 
