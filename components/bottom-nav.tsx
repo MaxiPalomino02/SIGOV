@@ -32,7 +32,9 @@ export function BottomNav({
   tareasPendientes?: number;
 }) {
   const pathname = usePathname();
-  const [masAbierto, setMasAbierto] = useState(false);
+  const [rutaMenu, setRutaMenu] = useState<string | null>(null);
+  const masAbierto = rutaMenu === pathname;
+
   const tabs = itemsPrincipales(avisosNoLeidos, tareasPendientes);
   const grupos = gruposNav(oficial, avisosNoLeidos, tareasPendientes);
   const masActivo = grupos
@@ -72,7 +74,7 @@ export function BottomNav({
             type="button"
             aria-haspopup="dialog"
             aria-expanded={masAbierto}
-            onClick={() => setMasAbierto(true)}
+            onClick={() => setRutaMenu(pathname)}
             className={`tap flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[12px] font-normal transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red ${
               masActivo ? "text-red" : "text-label-2"
             }`}
@@ -83,7 +85,7 @@ export function BottomNav({
         </div>
       </nav>
 
-      <Hoja open={masAbierto} onClose={() => setMasAbierto(false)} title="Más">
+      <Hoja open={masAbierto} onClose={() => setRutaMenu(null)} title="Más">
         <div className="space-y-6">
           {grupos.map((grupo) => (
             <section key={grupo.titulo}>
@@ -99,7 +101,7 @@ export function BottomNav({
                       key={item.href}
                       href={item.href}
                       aria-current={activo ? "page" : undefined}
-                      onClick={() => setMasAbierto(false)}
+                      onClick={() => setRutaMenu(null)}
                       className={`fila tap flex items-center gap-3 px-3 text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-red ${
                         activo ? "bg-red-tint text-red" : "text-label"
                       }`}
