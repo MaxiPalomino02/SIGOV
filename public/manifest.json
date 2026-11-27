@@ -3,7 +3,7 @@
   "name": "SIGOV",
   "short_name": "SIGOV",
   "description": "Sistema Integral de Gestión Operativa de Bomberos Voluntarios",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

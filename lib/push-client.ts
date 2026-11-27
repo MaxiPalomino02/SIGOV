@@ -27,7 +27,7 @@ export function registrarServiceWorkerPush(): Promise<ServiceWorkerRegistration>
 
   if (!registroPush) {
     registroPush = (async () => {
-      const registro = await navigator.serviceWorker.register("/sw.js", { scope: "/push/" });
+      const registro = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
       if (registro.active) return registro;
 
       const trabajador = registro.installing ?? registro.waiting;

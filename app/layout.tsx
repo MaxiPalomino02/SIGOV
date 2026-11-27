@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { SerwistProvider } from "@serwist/turbopack/react";
 import { BotonInstalarApp } from "@/components/boton-instalar-app";
 import { Sincronizador } from "@/components/sincronizador";
 import { CUARTEL } from "@/lib/cuartel.config";
@@ -51,7 +50,31 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${inter.variable} h-full antialiased`}>
       <head>
-        {!esProduccion ? (
+        {esProduccion ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  var objetivo = new URL('/sw.js', location.href).href;
+                  var alcance = new URL('/', location.href).href;
+                  navigator.serviceWorker.getRegistrations().then(function (registraciones) {
+                    return Promise.all(
+                      registraciones
+                        .filter(function (registro) {
+                          return registro.scope !== alcance || !registro.active || registro.active.scriptURL !== objetivo;
+                        })
+                        .map(function (registro) {
+                          return registro.unregister();
+                        })
+                    );
+                  }).then(function () {
+                    return navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                  }).catch(function () {});
+                }
+              `,
+            }}
+          />
+        ) : (
           <script
             dangerouslySetInnerHTML={{
               __html: `
@@ -70,14 +93,10 @@ export default function RootLayout({
               `,
             }}
           />
-        ) : null}
+        )}
       </head>
       <body className="min-h-full flex flex-col bg-bg text-label">
-        {esProduccion ? (
-          <SerwistProvider swUrl="/serwist/sw.js">{contenido}</SerwistProvider>
-        ) : (
-          contenido
-        )}
+        {contenido}
       </body>
     </html>
   );

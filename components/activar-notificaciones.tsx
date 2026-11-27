@@ -164,7 +164,7 @@ function useNotificaciones({
     setPendiente(true);
     try {
       if ("serviceWorker" in navigator) {
-        const registro = await navigator.serviceWorker.getRegistration("/push/");
+        const registro = await navigator.serviceWorker.getRegistration("/");
         const suscripcion = await registro?.pushManager.getSubscription();
         if (suscripcion) await suscripcion.unsubscribe();
       }
